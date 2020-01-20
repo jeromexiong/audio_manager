@@ -65,7 +65,11 @@ class _MyAppState extends State<MyApp> {
           AudioManager.instance.updateLrc(args["position"].toString());
           break;
         case AudioManagerEvents.error:
-          print("error");
+          Scaffold.of(context).showSnackBar(
+            SnackBar(
+              content: Text(args),
+            ),
+          );
           break;
         case AudioManagerEvents.next:
           next();
@@ -163,21 +167,35 @@ class _MyAppState extends State<MyApp> {
           ],
         ),
       ),
-      Slider(
-        value: _slider ?? 0.0,
-        activeColor: Colors.red,
-        onChanged: (value) {
-          setState(() {
-            _slider = value;
-          });
-        },
-        onChangeEnd: (value) {
-          if (_duration != null) {
-            int msec = (_duration * value).round();
-            AudioManager.instance.seekTo(msec);
-          }
-        },
-      ),
+      SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            trackHeight: 2,
+            thumbColor: Colors.blueAccent,
+            overlayColor: Colors.blue,
+            thumbShape: RoundSliderThumbShape(
+              disabledThumbRadius: 5,
+              enabledThumbRadius: 5,
+            ),
+            overlayShape: RoundSliderOverlayShape(
+              overlayRadius: 10,
+            ),
+            activeTrackColor: Colors.blueAccent,
+            inactiveTrackColor: Colors.grey,
+          ),
+          child: Slider(
+            value: _slider ?? 0,
+            onChanged: (value) {
+              setState(() {
+                _slider = value;
+              });
+            },
+            onChangeEnd: (value) {
+              if (_duration != null) {
+                int msec = (_duration * value).round();
+                AudioManager.instance.seekTo(msec);
+              }
+            },
+          )),
       Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: 16.0,

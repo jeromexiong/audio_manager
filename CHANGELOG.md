@@ -1,3 +1,8 @@
+## 0.1.2
+
+- Fix ios timeupdate.
+- Customize the style of the slider of the demo
+
 ## 0.1.1
 
 - update change log

@@ -1,6 +1,6 @@
 name: audio_manager
 description: A flutter plugin for music playback, including notification handling.
-version: 0.1.1
+version: 0.1.2
 homepage: https://github.com/jeromexiong/audio_manager
 
 environment:
