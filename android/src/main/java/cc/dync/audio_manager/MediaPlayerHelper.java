@@ -12,7 +12,6 @@ import android.os.PowerManager;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.widget.ImageView;
 
 import androidx.annotation.RequiresApi;
 
@@ -32,6 +31,8 @@ public class MediaPlayerHelper {
     private int delaySecondTime = 1000;//进度回调间隔
     private boolean isHolderCreate = false;//SurfaceHolder是否准备好了
     private WifiManager.WifiLock wifiLock;
+    private String curUrl = "";//当前初始化url
+    private boolean isPrepare = false;
 
     static class MediaInfo {
         String title;
@@ -181,22 +182,15 @@ public class MediaPlayerHelper {
         return instance;
     }
 
-
-    /**
-     * 设置播放信息
-     *
-     * @param info
-     * @return
-     */
-    public MediaPlayerHelper setInfo(MediaInfo info) {
-        this.mediaInfo = info;
-        return instance;
-    }
-
     /**
      * 播放音视频
      */
-    public void start() throws Exception {
+    void start(MediaInfo info) throws Exception {
+        if (info.url.equals(curUrl)) {
+            play();
+            return;
+        }
+        this.mediaInfo = info;
         if (mediaInfo.url == null) throw new Exception("you must invoke setInfo method before");
         if (!mediaInfo.isVideo) bindService();
 
@@ -214,6 +208,7 @@ public class MediaPlayerHelper {
             } else {
                 beginPlayAsset(mediaInfo.url);
             }
+            curUrl = mediaInfo.url;
             return;
         }
         // 通过文件路径播放音视频
@@ -226,6 +221,7 @@ public class MediaPlayerHelper {
         } else {
             beginPlayUrl(mediaInfo.url);
         }
+        curUrl = mediaInfo.url;
     }
 
     /**
@@ -289,7 +285,8 @@ public class MediaPlayerHelper {
      * @param speed 播放速率
      * @return 是否设置成功
      */
-    public boolean setSpeed(float speed) {
+    boolean setSpeed(float speed) {
+        if (!canPlay()) return false;
         //倍速设置，必须在23以上
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             try {
@@ -307,7 +304,28 @@ public class MediaPlayerHelper {
         }
     }
 
+    void play() {
+        if (!canPlay()) return;
+        if (isPlaying()) return;
+        uiHolder.player.start();
+
+        if (service != null)
+            service.updateNotification(isPlaying(), mediaInfo.title, mediaInfo.desc);
+        onStatusCallbackNext(CallBackState.playOrPause, isPlaying());
+    }
+
+    void pause() {
+        if (!canPlay()) return;
+        if (!isPlaying()) return;
+        uiHolder.player.pause();
+
+        if (service != null)
+            service.updateNotification(isPlaying(), mediaInfo.title, mediaInfo.desc);
+        onStatusCallbackNext(CallBackState.playOrPause, isPlaying());
+    }
+
     void playOrPause() {
+        if (!canPlay()) return;
         if (isPlaying()) {
             uiHolder.player.pause();
         } else {
@@ -319,7 +337,15 @@ public class MediaPlayerHelper {
         onStatusCallbackNext(CallBackState.playOrPause, isPlaying());
     }
 
-    public boolean isPlaying() {
+    private boolean canPlay() {
+        if (!isPrepare) {
+            Log.e(TAG, "视频未准备好");
+            onStatusCallbackNext(CallBackState.error, "加载失败");
+        }
+        return isPrepare;
+    }
+
+    boolean isPlaying() {
         if (uiHolder.player == null) return false;
         return uiHolder.player.isPlaying();
     }
@@ -466,7 +492,8 @@ public class MediaPlayerHelper {
                         uiHolder.player.setDisplay(uiHolder.surfaceHolder);
                     });
                 }
-                uiHolder.player.start();
+                isPrepare = true;
+//                uiHolder.player.start();
                 refress_time_handler.postDelayed(refress_time_Thread, delaySecondTime);
             } catch (Exception e) {
                 onStatusCallbackNext(CallBackState.error, e.toString());

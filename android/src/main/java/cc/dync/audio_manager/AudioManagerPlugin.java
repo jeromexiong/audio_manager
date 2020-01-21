@@ -147,7 +147,7 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
                 }
 
                 try {
-                    helper.setInfo(info).start();
+                    helper.start(info);
                 } catch (Exception ignored) {
                 }
                 break;

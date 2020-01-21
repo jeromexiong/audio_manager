@@ -116,6 +116,7 @@ open class AudioManager: NSObject {
             queue.rate = rate
             url = link
             
+            pause(link)
             observingTimeChanges()
             updateLockInfo()
             setRemoteControl()

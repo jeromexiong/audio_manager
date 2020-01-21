@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
 
-/// 播放回调事件枚举
+/// Play callback event enumeration
 enum AudioManagerEvents {
   buffering,
   playstatus,
@@ -13,7 +13,7 @@ enum AudioManagerEvents {
 }
 typedef void Events(AudioManagerEvents events, args);
 
-/// 播放速率枚举 [0.5, 0.75, 1, 1.5, 1.75, 2]
+/// Play rate enumeration [0.5, 0.75, 1, 1.5, 1.75, 2]
 enum AudioManagerRate { rate50, rate75, rate100, rate150, rate175, rate200 }
 const _rates = [0.5, 0.75, 1, 1.5, 1.75, 2];
 
@@ -33,7 +33,7 @@ class AudioManager {
       ..setMethodCallHandler(_handler);
   }
 
-  /// 当前播放状态
+  /// Current playback status
   bool get isPlaying => _playing;
   bool _playing = false;
   void _setPlaying(bool playing) {
@@ -43,11 +43,11 @@ class AudioManager {
     }
   }
 
-  /// 当前播放时长（毫秒
+  /// Current playing time (ms
   int get position => _position;
   int _position = 0;
 
-  /// 当前播放总时长（毫秒
+  /// Total current playing time (ms
   int get duration => _duration;
   int _duration = 0;
 
@@ -104,11 +104,13 @@ class AudioManager {
     return version;
   }
 
-  /// `url`: 播放地址，`network`地址或者`asset`地址.
+  /// Initial playback. Preloaded playback information
   ///
-  /// `title`: 通知播放标题
+  /// `url`: Playback address, `network` address or` asset` address.
   ///
-  /// `desc`: 通知详情；`cover`: 封面图地址，`network`地址或者`asset`地址.
+  /// `title`: Notification play title
+  ///
+  /// `desc`: Notification details; `cover`: cover image address,` network` address, or `asset` address.
   Future<String> start(String url, String title,
       {String desc, String cover}) async {
     final regx = new RegExp(r'^(http|https):\/\/([\w.]+\/?)\S*');
@@ -123,33 +125,35 @@ class AudioManager {
     return result;
   }
 
-  /// 播放或暂停；即若当前正在播放就暂停，反之就播放
+  /// Play or pause; that is, pause if currently playing, otherwise play
   ///
-  /// [return] 返回当前播放状态
+  /// ⚠️ Must be preloaded
+  ///
+  /// [return] Returns the current playback status
   Future<bool> playOrPause() async {
     bool result = await _channel.invokeMethod("playOrPause");
     return result;
   }
 
-  /// `position` 移动位置 毫秒时间戳
+  /// `position` Move location millisecond timestamp
   Future<String> seekTo(int position) async {
     if (position < 0 || position > duration)
       throw "[position] must be greater than 0 and less than the total duration";
     return await _channel.invokeMethod("seekTo", {"position": position});
   }
 
-  /// `rate` 播放速率，默认 1.0
+  /// `rate` Play rate, default 1.0
   Future<String> setSpeed(AudioManagerRate rate) async {
     int _rate = _rates[rate.index];
     return await _channel.invokeMethod("seekTo", {"rate": _rate});
   }
 
-  /// 停止播放
+  /// stop play
   stop() {
     _channel.invokeMethod("stop");
   }
 
-  /// 更新播放详情
+  /// Update play details
   updateLrc(String lrc) {
     _channel.invokeMethod("updateLrc", {"lrc": lrc});
   }

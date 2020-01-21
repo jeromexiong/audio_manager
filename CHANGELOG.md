@@ -1,3 +1,7 @@
+## 0.1.3
+
+- Fix Initialize before playing.
+
 ## 0.1.2
 
 - Fix ios timeupdate.

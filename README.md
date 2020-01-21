@@ -36,6 +36,7 @@ The `audio_manager` plugin is developed in singleton mode. You only need to get`
 ⚠️ you can use local `assets` resources or `network` resources
 
 ```
+// Initial playback. Preloaded playback information
 AudioManager.instance
 	.start(
 		"assets/audio.mp3",
@@ -47,6 +48,9 @@ AudioManager.instance
 	.then((err) {
 	print(err);
 });
+
+// Play or pause; that is, pause if currently playing, otherwise play
+AudioManager.instance.playOrPause()
 
 // events callback
 AudioManager.instance.onEvents((events, args) {
