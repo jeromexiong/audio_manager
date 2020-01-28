@@ -51,6 +51,10 @@ class AudioManager {
   int get duration => _duration;
   int _duration = 0;
 
+  /// Playback info
+  Map<String, dynamic> get info => _info;
+  Map<String, dynamic> _info;
+
   Future<dynamic> _handler(MethodCall methodCall) {
     switch (methodCall.method) {
       case "buffering":
@@ -113,6 +117,8 @@ class AudioManager {
   /// `desc`: Notification details; `cover`: cover image address,` network` address, or `asset` address.
   Future<String> start(String url, String title,
       {String desc, String cover}) async {
+    _info = {"url": url, "title": title, "desc": desc, "cover": cover};
+
     final regx = new RegExp(r'^(http|https):\/\/([\w.]+\/?)\S*');
     final result = await _channel.invokeMethod('start', {
       "url": url,

@@ -1,3 +1,8 @@
+## 0.1.4
+
+- Fix pub.dev support.
+- Add method to get playback info.
+
 ## 0.1.3
 
 - Fix Initialize before playing.

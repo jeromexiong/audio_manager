@@ -36,8 +36,8 @@ class _MyAppState extends State<MyApp> {
   void setupAudio() {
     AudioManager.instance
         .start(
-            // "assets/audio.mp3",
-            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+            "assets/audio.mp3",
+            // "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
             "title",
             desc: "desc",
             // cover: "assets/ic_launcher.png",
@@ -63,6 +63,7 @@ class _MyAppState extends State<MyApp> {
           _slider = _position / _duration;
           setState(() {});
           AudioManager.instance.updateLrc(args["position"].toString());
+          print(AudioManager.instance.info);
           break;
         case AudioManagerEvents.error:
           Scaffold.of(context).showSnackBar(

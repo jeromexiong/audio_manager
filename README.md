@@ -30,7 +30,7 @@ Since `Android9.0 (API 28)`, the application disables HTTP plaintext requests by
 ```
 
 ## How to use?
-The `audio_manager` plugin is developed in singleton mode. You only need to get` AudioManager.instance` in the method to quickly start using it.
+The `audio_manager` plugin is developed in singleton mode. You only need to get`AudioManager.instance` in the method to quickly start using it.
 
 ## Quick start
 ⚠️ you can use local `assets` resources or `network` resources
