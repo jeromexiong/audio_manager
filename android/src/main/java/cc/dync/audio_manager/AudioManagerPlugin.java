@@ -1,13 +1,10 @@
 package cc.dync.audio_manager;
 
 import android.content.Context;
-import android.content.res.AssetFileDescriptor;
-import android.content.res.AssetManager;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -98,7 +95,8 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
                     break;
                 case error:
                     Log.v(TAG, "播放错误:" + args[0]);
-                    channel.invokeMethod("error", args);
+                    channel.invokeMethod("error", args[0]);
+                    helper.release();
                     break;
                 case next:
                     channel.invokeMethod("next", null);
@@ -148,7 +146,8 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
 
                 try {
                     helper.start(info);
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    result.success(e.getMessage());
                 }
                 break;
             case "playOrPause":

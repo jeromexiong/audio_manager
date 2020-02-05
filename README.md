@@ -1,6 +1,7 @@
 # audio_manager
 
 A flutter plugin for music playback, including notification handling.
+> This plugin for android is based on mediaplayer, iOS is based on AVPlayer development
 
 <img src="./screenshots/android.png" height="300"><img src="./screenshots/iOS.png" height="300">
 

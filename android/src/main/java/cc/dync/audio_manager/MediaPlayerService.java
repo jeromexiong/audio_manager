@@ -13,7 +13,6 @@ import android.content.ServiceConnection;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
@@ -25,7 +24,6 @@ import androidx.core.app.NotificationCompat;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Objects;
 
@@ -81,6 +79,7 @@ public class MediaPlayerService extends Service {
     private static MediaPlayerService bindService;
     private static boolean isBindService = false;
     private static Context context;
+    private static int smallIcon;
 
     // 绑定服务
     public static void bindService(Context context, ServiceEvents serviceEvents) {
@@ -160,6 +159,10 @@ public class MediaPlayerService extends Service {
 
     };
 
+    public static void setSmallIcon(int icon) {
+        smallIcon = icon;
+    }
+
 
     //    private static final int DELETE_PENDING_REQUESTS = 1022;
     private static final int CONTENT_PENDING_REQUESTS = 1023;
@@ -198,7 +201,7 @@ public class MediaPlayerService extends Service {
 
         builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
                 // 设置状态栏小图标
-                .setSmallIcon(R.drawable.ic_launcher)
+                .setSmallIcon(MediaPlayerService.smallIcon != 0 ? smallIcon : R.drawable.ic_launcher)
                 // 设置标题
                 .setContentTitle("AudioManager")
                 // 设置内容
@@ -247,7 +250,7 @@ public class MediaPlayerService extends Service {
         }
     }
 
-    void updateCover(int srcId){
+    void updateCover(int srcId) {
         views.setImageViewResource(R.id.image, srcId);
     }
 

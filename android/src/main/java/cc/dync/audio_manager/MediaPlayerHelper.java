@@ -139,6 +139,7 @@ public class MediaPlayerHelper {
      * @return 实例
      */
     private MediaPlayerHelper bindService() {
+//        MediaPlayerService.setSmallIcon(R.drawable.ic_launcher1);
         MediaPlayerService.bindService(context, (events, args) -> {
             switch (events) {
                 case binder:
@@ -339,8 +340,8 @@ public class MediaPlayerHelper {
 
     private boolean canPlay() {
         if (!isPrepare) {
-            Log.e(TAG, "视频未准备好");
-            onStatusCallbackNext(CallBackState.error, "加载失败");
+            Log.e(TAG, "媒体资源加载失败");
+            onStatusCallbackNext(CallBackState.error, "媒体资源加载失败");
         }
         return isPrepare;
     }
@@ -385,6 +386,7 @@ public class MediaPlayerHelper {
             uiHolder.player.release();
             uiHolder.player = null;
         }
+        MediaPlayerService.unBind(context);
         refress_time_handler.removeCallbacks(refress_time_Thread);
 
         if (wifiLock != null && wifiLock.isHeld())

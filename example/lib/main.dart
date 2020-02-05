@@ -17,6 +17,7 @@ class _MyAppState extends State<MyApp> {
   int _duration;
   int _position;
   num _slider;
+  String _error;
 
   @override
   void initState() {
@@ -66,11 +67,8 @@ class _MyAppState extends State<MyApp> {
           print(AudioManager.instance.info);
           break;
         case AudioManagerEvents.error:
-          Scaffold.of(context).showSnackBar(
-            SnackBar(
-              content: Text(args),
-            ),
-          );
+          _error = args;
+          setState(() {});
           break;
         case AudioManagerEvents.next:
           next();
@@ -119,7 +117,10 @@ class _MyAppState extends State<MyApp> {
           child: Column(
             children: <Widget>[
               Text('Running on: $_platformVersion\n'),
-              Expanded(child: Center(child: Text("lrc text: $_position"))),
+              Expanded(
+                  child: Center(
+                      child: Text(
+                          _error != null ? _error : "lrc text: $_position"))),
               bottomPanel()
             ],
           ),
@@ -147,8 +148,8 @@ class _MyAppState extends State<MyApp> {
             ),
             IconButton(
               onPressed: () async {
-                bool isPlaying = await AudioManager.instance.playOrPause();
-                print("await -- $isPlaying");
+                String status = await AudioManager.instance.playOrPause();
+                print("await -- $status");
               },
               padding: const EdgeInsets.all(0.0),
               icon: Icon(

@@ -1,3 +1,7 @@
+## 0.1.5
+
+- Optimization error prompt.
+
 ## 0.1.4
 
 - Fix pub.dev support.

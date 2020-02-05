@@ -51,22 +51,27 @@ class AudioManager {
   int get duration => _duration;
   int _duration = 0;
 
+  /// If there are errors, return details
+  String get error => _error;
+  String _error;
+
   /// Playback info
   Map<String, dynamic> get info => _info;
   Map<String, dynamic> _info;
 
-  Future<dynamic> _handler(MethodCall methodCall) {
-    switch (methodCall.method) {
+  Future<dynamic> _handler(MethodCall call) {
+    switch (call.method) {
       case "buffering":
         if (_events != null)
-          _events(AudioManagerEvents.buffering, methodCall.arguments);
+          _events(AudioManagerEvents.buffering, call.arguments);
         break;
       case "playstatus":
-        _setPlaying(methodCall.arguments);
+        _setPlaying(call.arguments);
         break;
       case "timeupdate":
-        _position = methodCall.arguments["position"];
-        _duration = methodCall.arguments["duration"];
+        _error = null;
+        _position = call.arguments["position"];
+        _duration = call.arguments["duration"];
         if (!_playing) _setPlaying(true);
         if (_position < 0 || _duration < 0) break;
         if (_position > _duration) {
@@ -78,9 +83,9 @@ class AudioManager {
               {"position": _position, "duration": _duration});
         break;
       case "error":
+        _error = call.arguments;
         if (_playing) _setPlaying(false);
-        if (_events != null)
-          _events(AudioManagerEvents.error, methodCall.arguments);
+        if (_events != null) _events(AudioManagerEvents.error, _error);
         break;
       case "next":
         if (_events != null) _events(AudioManagerEvents.next, null);
@@ -89,11 +94,19 @@ class AudioManager {
         if (_events != null) _events(AudioManagerEvents.previous, null);
         break;
       default:
-        if (_events != null)
-          _events(AudioManagerEvents.unknow, methodCall.arguments);
+        if (_events != null) _events(AudioManagerEvents.unknow, call.arguments);
         break;
     }
     return Future.value(true);
+  }
+
+  bool _initialize;
+  String _preprocessing() {
+    if (_info == null) return "you must invoke the [start] method first";
+    if (_error != null) return _error;
+    if (_initialize != null && !_initialize)
+      return "you must invoke the [start] method after calling the [stop] method";
+    return "";
   }
 
   Events _events;
@@ -118,6 +131,7 @@ class AudioManager {
   Future<String> start(String url, String title,
       {String desc, String cover}) async {
     _info = {"url": url, "title": title, "desc": desc, "cover": cover};
+    _initialize = true;
 
     final regx = new RegExp(r'^(http|https):\/\/([\w.]+\/?)\S*');
     final result = await _channel.invokeMethod('start', {
@@ -136,20 +150,23 @@ class AudioManager {
   /// ⚠️ Must be preloaded
   ///
   /// [return] Returns the current playback status
-  Future<bool> playOrPause() async {
+  Future<String> playOrPause() async {
+    if (_preprocessing().isNotEmpty) return _preprocessing();
     bool result = await _channel.invokeMethod("playOrPause");
-    return result;
+    return "playOrPause: $result";
   }
 
   /// `position` Move location millisecond timestamp
   Future<String> seekTo(int position) async {
+    if (_preprocessing().isNotEmpty) return _preprocessing();
     if (position < 0 || position > duration)
-      throw "[position] must be greater than 0 and less than the total duration";
+      return "[position] must be greater than 0 and less than the total duration";
     return await _channel.invokeMethod("seekTo", {"position": position});
   }
 
   /// `rate` Play rate, default 1.0
   Future<String> setSpeed(AudioManagerRate rate) async {
+    if (_preprocessing().isNotEmpty) return _preprocessing();
     int _rate = _rates[rate.index];
     return await _channel.invokeMethod("seekTo", {"rate": _rate});
   }
@@ -157,10 +174,12 @@ class AudioManager {
   /// stop play
   stop() {
     _channel.invokeMethod("stop");
+    _initialize = false;
   }
 
   /// Update play details
   updateLrc(String lrc) {
+    if (_preprocessing().isNotEmpty) return _preprocessing();
     _channel.invokeMethod("updateLrc", {"lrc": lrc});
   }
 }
