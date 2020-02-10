@@ -30,11 +30,13 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
+    // 释放所有资源
     AudioManager.instance.stop();
     super.dispose();
   }
 
   void setupAudio() {
+    AudioManager.instance.stop();
     AudioManager.instance
         .start(
             "assets/audio.mp3",
@@ -49,7 +51,7 @@ class _MyAppState extends State<MyApp> {
     });
 
     AudioManager.instance.onEvents((events, args) {
-      // print("$events, $args");
+      print("$events, $args");
       switch (events) {
         case AudioManagerEvents.buffering:
           print("buffering $args");
@@ -64,7 +66,10 @@ class _MyAppState extends State<MyApp> {
           _slider = _position / _duration;
           setState(() {});
           AudioManager.instance.updateLrc(args["position"].toString());
-          print(AudioManager.instance.info);
+          // print(AudioManager.instance.info);
+          if (_slider == 1){
+            next();
+          }
           break;
         case AudioManagerEvents.error:
           _error = args;

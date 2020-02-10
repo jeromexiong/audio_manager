@@ -193,6 +193,11 @@ public class MediaPlayerHelper {
         }
         this.mediaInfo = info;
         if (mediaInfo.url == null) throw new Exception("you must invoke setInfo method before");
+
+        uiHolder.player = new MediaPlayer();
+        keepAlive();
+        initPlayerListener();
+
         if (!mediaInfo.isVideo) bindService();
 
         if (mediaInfo.isAsset) {
@@ -370,22 +375,24 @@ public class MediaPlayerHelper {
     /**
      * 停止资源
      */
-    public void stop() {
-        if (uiHolder.player != null) {
-            uiHolder.player.stop();
-        }
-        MediaPlayerService.unBind(context);
-        onStatusCallbackNext(CallBackState.stop);
-    }
+//    public void stop() {
+//        if (uiHolder.player != null) {
+//            uiHolder.player.stop();
+//        }
+//        MediaPlayerService.unBind(context);
+//        refress_time_handler.removeCallbacks(refress_time_Thread);
+//        onStatusCallbackNext(CallBackState.stop);
+//    }
 
     /**
      * 释放资源
      */
-    public void release() {
+    public void stop() {
         if (uiHolder.player != null) {
             uiHolder.player.release();
             uiHolder.player = null;
         }
+        onStatusCallbackNext(CallBackState.stop);
         MediaPlayerService.unBind(context);
         refress_time_handler.removeCallbacks(refress_time_Thread);
 
@@ -462,9 +469,9 @@ public class MediaPlayerHelper {
         }
         this.context = context;
         this.uiHolder = new Holder();
-        uiHolder.player = new MediaPlayer();
-        keepAlive();
-        initPlayerListener();
+//        uiHolder.player = new MediaPlayer();
+//        keepAlive();
+//        initPlayerListener();
     }
 
     /**
@@ -495,7 +502,7 @@ public class MediaPlayerHelper {
                     });
                 }
                 isPrepare = true;
-//                uiHolder.player.start();
+                uiHolder.player.start();
                 refress_time_handler.postDelayed(refress_time_Thread, delaySecondTime);
             } catch (Exception e) {
                 onStatusCallbackNext(CallBackState.error, e.toString());

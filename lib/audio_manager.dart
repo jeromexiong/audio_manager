@@ -130,9 +130,13 @@ class AudioManager {
   /// `desc`: Notification details; `cover`: cover image address,` network` address, or `asset` address.
   Future<String> start(String url, String title,
       {String desc, String cover}) async {
+    if (url == null || url.isEmpty) return "[url] can not be null or empty";
+    if (title == null || title.isEmpty) return "[title] can not be null or empty";
+    cover = cover ?? "";
+    desc = desc ?? "";
+
     _info = {"url": url, "title": title, "desc": desc, "cover": cover};
     _initialize = true;
-
     final regx = new RegExp(r'^(http|https):\/\/([\w.]+\/?)\S*');
     final result = await _channel.invokeMethod('start', {
       "url": url,

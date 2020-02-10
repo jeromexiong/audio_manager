@@ -11,7 +11,7 @@ import MediaPlayer
 
 open class AudioManager: NSObject {
     public enum Events {
-        case stop, playing, buffering, pause, ended, next, previous, timeupdate(_ position: Double, _ duration: Double), error(NSError)
+        case stop, playing, buffering(Bool, Double), pause, ended, next, previous, timeupdate(_ position: Double, _ duration: Double), error(NSError)
     }
     
     public static let `default`: AudioManager = {
@@ -26,10 +26,13 @@ open class AudioManager: NSObject {
     /// 是否缓存中
     open fileprivate(set) var buffering = true {
         didSet {
-            if buffering {
-                onEvents?(.buffering)
-            }
-            playing = !buffering
+            onEvents?(.buffering(buffering, buffer))
+        }
+    }
+    /// 缓存进度
+    open fileprivate(set) var buffer: Double = 0 {
+        didSet {
+            onEvents?(.buffering(buffering, buffer))
         }
     }
     /// 是否正在播放
@@ -71,6 +74,10 @@ open class AudioManager: NSObject {
     fileprivate var queue = AVQueuePlayer()
     fileprivate var _playingMusic = Dictionary<String, Any>()
     fileprivate var timeObserver: Any?
+    fileprivate var observeStatus: NSKeyValueObservation?
+    fileprivate var observeLoaded: NSKeyValueObservation?
+    fileprivate var observeBufferEmpty: NSKeyValueObservation?
+    fileprivate var observeCanPlay: NSKeyValueObservation?
     
     /// 注册后台播放
     /// register in application didFinishLaunchingWithOptions method
@@ -112,13 +119,12 @@ open class AudioManager: NSObject {
             }
             _playingMusic[link] = playerItem
             queue.replaceCurrentItem(with: playerItem)
-            queue.actionAtItemEnd = .advance
+            queue.actionAtItemEnd = .none
             queue.rate = rate
             url = link
             
-            pause(link)
             observingTimeChanges()
-            updateLockInfo()
+            observingProps()
             setRemoteControl()
             NotificationCenter.default.addObserver(self, selector: #selector(playerFinishPlaying(_:)), name: .AVPlayerItemDidPlayToEndTime, object: nil)
         }else {
@@ -134,12 +140,7 @@ open class AudioManager: NSObject {
         }
         if queue.currentItem?.status != .readyToPlay { return }
         
-        playerItem.seek(to: CMTime(seconds: position, preferredTimescale: timescale)) { (_) in
-            self._playingMusic[_url] = playerItem
-            self.play()
-            self.playing = true
-            self.onEvents?(.playing)
-        }
+        playerItem.seek(to: CMTime(seconds: position, preferredTimescale: timescale))
     }
     
     /// 播放▶️音乐🎵
@@ -180,9 +181,9 @@ open class AudioManager: NSObject {
     
     /// 清除所有播放信息
     open func clean() {
+        stop()
         queue.removeAllItems()
         _playingMusic.removeAll()
-        stop()
     }
 }
 fileprivate extension AudioManager {
@@ -215,23 +216,40 @@ fileprivate extension AudioManager {
             let time = CMTimeMake(value: 1, timescale: 1)
             timeObserver = queue.addPeriodicTimeObserver(forInterval: time, queue: DispatchQueue.main, using: { (currentPlayerTime) in
                 self.updateLockInfo()
-                self.checkAudioPlayback()
             })
         }
     }
-    func checkAudioPlayback(){
-        if queue.currentItem?.status == .readyToPlay {
-            let playbackLikelyToKeepUp = queue.currentItem?.isPlaybackLikelyToKeepUp
-            let playbackBufferFull = queue.currentItem?.isPlaybackBufferFull
-            let playbackBufferEmpty = queue.currentItem?.isPlaybackBufferEmpty
-            
-            if playbackLikelyToKeepUp ?? false {
-                self.buffering = false
-            }else if playbackBufferEmpty ?? true{
-                self.buffering = true
-            }else if playbackBufferFull ?? false{
-                self.buffering = false
+    /// 监听属性变化
+    func observingProps() {
+        observeStatus = queue.currentItem?.observe(\.status) {
+            [unowned self] _playerItem, change in
+            if _playerItem.status == .readyToPlay {
+                self.playing = true
+            }else {
+                self.playing = false
             }
+        }
+        
+        observeLoaded = queue.currentItem?.observe(\.loadedTimeRanges) {
+            [unowned self] _playerItem, change in
+            let ranges = _playerItem.loadedTimeRanges
+            guard let timeRange = ranges.first as? CMTimeRange else { return }
+            let start = timeRange.start.seconds
+            let duration = timeRange.duration.seconds
+            let cached = start + duration
+            
+            let total = _playerItem.duration.seconds
+            self.buffer = cached / total * 100
+        }
+        
+        observeBufferEmpty = queue.currentItem?.observe(\.isPlaybackBufferEmpty) {
+            [unowned self] _playerItem, change in
+            self.buffering = true
+        }
+        
+        observeCanPlay = queue.currentItem?.observe(\.isPlaybackLikelyToKeepUp) {
+            [unowned self] _playerItem, change in
+            self.buffering = false
         }
     }
     @objc func playerFinishPlaying(_ n: Notification) {

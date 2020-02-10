@@ -14,13 +14,14 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
         instance.registrar = registrar
         AudioManager.default.onEvents = { event in
             switch event {
-            case .buffering:
-                channel.invokeMethod("buffering", arguments: nil)
+            case .buffering(let buffering, let buffer):
+                channel.invokeMethod("buffering", arguments: ["buffering": buffering, "buffer": buffer])
             case .playing, .pause:
                 channel.invokeMethod("playstatus", arguments: AudioManager.default.playing)
             case .timeupdate(let position, let duration):
                 channel.invokeMethod("timeupdate", arguments: ["position": Int(position*1000), "duration": Int(duration*1000)])
             case .error(let e):
+                AudioManager.default.clean()
                 channel.invokeMethod("error", arguments: e.description)
             case .next:
                 channel.invokeMethod("next", arguments: nil)
@@ -35,12 +36,12 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         let arguments = call.arguments as? Dictionary<String,Any> ?? [:]
         let url = arguments["url"] as? String
-        print(arguments)
+        print("arguments: ", arguments)
         switch call.method {
         case "getPlatformVersion":
             result("iOS " + UIDevice.current.systemVersion)
         case "start":
-            guard let url = url else {
+            guard var url = url else {
                 result("参数错误")
                 return
             }
@@ -54,6 +55,9 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
                 }
             }
             let isLocal = arguments["isLocal"] as? Bool ?? false
+            if isLocal {
+                url = SwiftAudioManagerPlugin.instance.registrar.lookupKey(forAsset: url)
+            }
             AudioManager.default.start(url, isLocal: isLocal)
         case "playOrPause":
             if AudioManager.default.playing {
@@ -62,6 +66,8 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
                 AudioManager.default.play(url)
             }
             result(AudioManager.default.playing)
+        case "stop":
+            AudioManager.default.clean()
         case "updateLrc":
             AudioManager.default.desc = arguments["lrc"] as? String
         case "seekTo":

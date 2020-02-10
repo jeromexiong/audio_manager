@@ -78,7 +78,11 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
                 case buffering:
                     if (args.length == 0) return;
                     Log.v(TAG, "网络缓冲:" + args[1] + "%");
-                    channel.invokeMethod("buffering", args[1]);
+
+                    Map map = new HashMap();
+                    map.put("buffering", !helper.isPlaying());
+                    map.put("buffer", args[1]);
+                    channel.invokeMethod("buffering", map);
                     break;
                 case playOrPause:
                     if (args.length == 0) return;
@@ -88,15 +92,15 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
                     if (args.length == 0) return;
                     Log.v(TAG, "进度:" + args[0] + "%");
 
-                    Map map = new HashMap();
-                    map.put("position", helper.position());
-                    map.put("duration", helper.duration());
-                    channel.invokeMethod("timeupdate", map);
+                    Map map2 = new HashMap();
+                    map2.put("position", helper.position());
+                    map2.put("duration", helper.duration());
+                    channel.invokeMethod("timeupdate", map2);
                     break;
                 case error:
                     Log.v(TAG, "播放错误:" + args[0]);
                     channel.invokeMethod("error", args[0]);
-                    helper.release();
+                    helper.stop();
                     break;
                 case next:
                     channel.invokeMethod("next", null);
@@ -136,7 +140,7 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
                     }
                 }
                 info.cover = cover;
-                if (isLocalCover){
+                if (isLocalCover) {
                     if (registrar != null) {
                         info.cover = registrar.lookupKeyForAsset(cover);
                     } else if (flutterAssets != null) {
