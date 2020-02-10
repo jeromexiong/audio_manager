@@ -1,3 +1,9 @@
+## 0.2.1
+
+- Add cache hint
+- Fix start and stop error
+- List loop playback
+
 ## 0.1.5
 
 - Optimization error prompt.

@@ -194,6 +194,7 @@ public class MediaPlayerHelper {
         this.mediaInfo = info;
         if (mediaInfo.url == null) throw new Exception("you must invoke setInfo method before");
 
+        stop();
         uiHolder.player = new MediaPlayer();
         keepAlive();
         initPlayerListener();

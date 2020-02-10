@@ -18,14 +18,13 @@ class _MyAppState extends State<MyApp> {
   int _position;
   num _slider;
   String _error;
+  num curIndex = 0;
 
   @override
   void initState() {
     super.initState();
 
     initPlatformState();
-
-    setupAudio();
   }
 
   @override
@@ -35,17 +34,29 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  void setupAudio() {
-    AudioManager.instance.stop();
+  final list = [
+    {
+      "title": "Assets",
+      "desc": "local assets playback",
+      "url": "assets/audio.mp3",
+      "cover": "assets/ic_launcher.png"
+    },
+    {
+      "title": "network",
+      "desc": "network resouce playback",
+      "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+      "cover":
+          "https://cdn.jsdelivr.net/gh/flutterchina/website@1.0/images/flutter-mark-square-100.png"
+    },
+  ];
+
+  void setupAudio(int idx) {
+    final item = list[idx];
+    curIndex = idx;
+
     AudioManager.instance
-        .start(
-            "assets/audio.mp3",
-            // "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-            "title",
-            desc: "desc",
-            // cover: "assets/ic_launcher.png",
-            cover:
-                "https://cdn.jsdelivr.net/gh/flutterchina/website@1.0/images/flutter-mark-square-100.png")
+        .start(item["url"], item["title"],
+            desc: item["desc"], cover: item["cover"])
         .then((err) {
       print(err);
     });
@@ -67,7 +78,7 @@ class _MyAppState extends State<MyApp> {
           setState(() {});
           AudioManager.instance.updateLrc(args["position"].toString());
           // print(AudioManager.instance.info);
-          if (_slider == 1){
+          if (_slider == 1) {
             next();
           }
           break;
@@ -89,10 +100,15 @@ class _MyAppState extends State<MyApp> {
 
   void next() {
     print("next audio");
+    int idx = (curIndex + 1) % list.length;
+    setupAudio(idx);
   }
 
   void previous() {
     print("previous audio");
+    int idx = curIndex - 1;
+    idx = idx < 0 ? list.length - 1 : idx;
+    setupAudio(idx);
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
@@ -123,9 +139,22 @@ class _MyAppState extends State<MyApp> {
             children: <Widget>[
               Text('Running on: $_platformVersion\n'),
               Expanded(
-                  child: Center(
-                      child: Text(
-                          _error != null ? _error : "lrc text: $_position"))),
+                child: ListView.separated(
+                    itemBuilder: (context, item) {
+                      return ListTile(
+                        title: Text(list[item]["title"],
+                            style: TextStyle(fontSize: 18)),
+                        subtitle: Text(list[item]["desc"]),
+                        onTap: () => setupAudio(item),
+                      );
+                    },
+                    separatorBuilder: (BuildContext context, int index) =>
+                        Divider(),
+                    itemCount: list.length),
+              ),
+              Center(
+                  child:
+                      Text(_error != null ? _error : "lrc text: $_position")),
               bottomPanel()
             ],
           ),

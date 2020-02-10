@@ -102,6 +102,7 @@ open class AudioManager: NSObject {
     
     /// 必须要调用 start method 才能进行其他操作
     open func start(_ link: String, isLocal: Bool = false) {
+        stop()
         var playerItem: AVPlayerItem? = _playingMusic[link] as? AVPlayerItem
         if playerItem == nil {
             if isLocal {
