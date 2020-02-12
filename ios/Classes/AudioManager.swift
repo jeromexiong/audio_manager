@@ -102,7 +102,7 @@ open class AudioManager: NSObject {
     
     /// 必须要调用 start method 才能进行其他操作
     open func start(_ link: String, isLocal: Bool = false) {
-        stop()
+        stop(url)
         var playerItem: AVPlayerItem? = _playingMusic[link] as? AVPlayerItem
         if playerItem == nil {
             if isLocal {
@@ -171,6 +171,7 @@ open class AudioManager: NSObject {
         let playerItem: AVPlayerItem? = _playingMusic[link ?? url ?? ""] as? AVPlayerItem
         if playerItem != nil {
             queue.remove(playerItem!)
+            _playingMusic.removeValue(forKey: link ?? url ?? "")
         }
         if timeObserver != nil {
             NotificationCenter.default.removeObserver(Notification.Name.AVPlayerItemDidPlayToEndTime)
@@ -265,6 +266,7 @@ fileprivate extension AudioManager {
         }
         let duration = Double(CMTimeGetSeconds(queue.currentItem?.duration ?? .zero))
         let currentTime = Double(CMTimeGetSeconds(queue.currentTime()))
+        if duration.isNaN || currentTime.isNaN { return }
         
         let center = MPNowPlayingInfoCenter.default()
         var infos = [String: Any]()

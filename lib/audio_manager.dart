@@ -19,8 +19,8 @@ const _rates = [0.5, 0.75, 1, 1.5, 1.75, 2];
 
 class AudioManager {
   static AudioManager _instance;
-  static AudioManager get instance => getInstance();
-  static getInstance() {
+  static AudioManager get instance => _getInstance();
+  static _getInstance() {
     if (_instance == null) {
       _instance = new AudioManager._();
     }
@@ -54,6 +54,22 @@ class AudioManager {
   /// If there are errors, return details
   String get error => _error;
   String _error;
+
+  /// list of playback. Used to record playlists
+  ///
+  /// `⚠️ The objects in the list must contain the URL and title properties`,
+  /// otherwise the previous song will not be played if [loop] is true on its own.
+  void setPlaybackList(List list, bool loop) {
+    _list = list;
+    _loop = loop;
+  }
+
+  List get playbackList => _list;
+  List _list;
+
+  /// Whether to loop
+  bool get loop => _loop;
+  bool _loop;
 
   /// Playback info
   Map<String, dynamic> get info => _info;
@@ -131,7 +147,8 @@ class AudioManager {
   Future<String> start(String url, String title,
       {String desc, String cover}) async {
     if (url == null || url.isEmpty) return "[url] can not be null or empty";
-    if (title == null || title.isEmpty) return "[title] can not be null or empty";
+    if (title == null || title.isEmpty)
+      return "[title] can not be null or empty";
     cover = cover ?? "";
     desc = desc ?? "";
 

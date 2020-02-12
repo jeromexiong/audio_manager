@@ -1,3 +1,7 @@
+## 0.2.1+hotfix.1
+
+- Fix iOS loop playback
+
 ## 0.2.1
 
 - Add cache hint
