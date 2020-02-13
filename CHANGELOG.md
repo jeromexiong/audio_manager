@@ -1,4 +1,4 @@
-## 0.2.1+hotfix.1
+## 0.2.1+hotfix.2
 
 - Fix iOS loop playback
 

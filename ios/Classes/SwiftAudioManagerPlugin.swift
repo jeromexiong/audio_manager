@@ -27,6 +27,8 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
                 channel.invokeMethod("next", arguments: nil)
             case .previous:
                 channel.invokeMethod("previous", arguments: nil)
+            case .ended:
+                channel.invokeMethod("ended", arguments: nil)
             default:
                 break
             }

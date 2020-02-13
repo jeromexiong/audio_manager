@@ -108,6 +108,9 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
                 case previous:
                     channel.invokeMethod("previous", null);
                     break;
+                case ended:
+                    channel.invokeMethod("ended", null);
+                    break;
             }
         });
     }

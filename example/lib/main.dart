@@ -78,9 +78,6 @@ class _MyAppState extends State<MyApp> {
           setState(() {});
           AudioManager.instance.updateLrc(args["position"].toString());
           // print(AudioManager.instance.info);
-          if (_slider == 1) {
-            next();
-          }
           break;
         case AudioManagerEvents.error:
           _error = args;
@@ -91,6 +88,9 @@ class _MyAppState extends State<MyApp> {
           break;
         case AudioManagerEvents.previous:
           previous();
+          break;
+        case AudioManagerEvents.ended:
+          next();
           break;
         default:
           break;

@@ -9,6 +9,7 @@ enum AudioManagerEvents {
   error,
   next,
   previous,
+  ended,
   unknow
 }
 typedef void Events(AudioManagerEvents events, args);
@@ -60,6 +61,8 @@ class AudioManager {
   /// `⚠️ The objects in the list must contain the URL and title properties`,
   /// otherwise the previous song will not be played if [loop] is true on its own.
   void setPlaybackList(List list, bool loop) {
+    if (list == null || list.length == 0)
+      throw "[list] can not be null or empty";
     _list = list;
     _loop = loop;
   }
@@ -108,6 +111,9 @@ class AudioManager {
         break;
       case "previous":
         if (_events != null) _events(AudioManagerEvents.previous, null);
+        break;
+      case "ended":
+        if (_events != null) _events(AudioManagerEvents.ended, null);
         break;
       default:
         if (_events != null) _events(AudioManagerEvents.unknow, call.arguments);

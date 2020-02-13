@@ -127,7 +127,7 @@ open class AudioManager: NSObject {
             observingTimeChanges()
             observingProps()
             setRemoteControl()
-            NotificationCenter.default.addObserver(self, selector: #selector(playerFinishPlaying(_:)), name: .AVPlayerItemDidPlayToEndTime, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(playerFinishPlaying(_:)), name: .AVPlayerItemDidPlayToEndTime, object: queue.currentItem)
         }else {
             play(link)
         }
