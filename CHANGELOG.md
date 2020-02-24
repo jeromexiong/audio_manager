@@ -1,8 +1,11 @@
-## 0.2.1+3
+## 0.3.1
 
 - Add `auto` attribute whether to play automatically, default is true
 - Optimize the time type
 - Fix repeat callbacks
+
+## 0.2.1+hotfix.2
+
 - Fix iOS loop playback
 
 ## 0.2.1
