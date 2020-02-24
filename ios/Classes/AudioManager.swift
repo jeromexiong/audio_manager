@@ -11,7 +11,7 @@ import MediaPlayer
 
 open class AudioManager: NSObject {
     public enum Events {
-        case stop, playing, buffering(Bool, Double), pause, ended, next, previous, timeupdate(_ position: Double, _ duration: Double), error(NSError)
+        case ready(_ duration: Int), stop, playing, buffering(Bool, Double), pause, ended, next, previous, timeupdate(_ position: Double, _ duration: Double), error(NSError)
     }
     
     public static let `default`: AudioManager = {
@@ -51,13 +51,16 @@ open class AudioManager: NSObject {
             queue.rate = rate
         }
     }
+    /// 是否自动播放
+    open var isAuto: Bool = true
+    
     /// get total duration  /milisecond
-    open var duration: Double {
+    open var duration: Int {
         let duration = queue.currentItem?.duration ?? CMTime.zero
         if CMTimeGetSeconds(duration).isNaN {
             return 0
         }
-        return CMTimeGetSeconds(duration) * 1000
+        return Int(CMTimeGetSeconds(duration)) * 1000
     }
     /// get current position /milisecond
     open var currentTime: Int {
@@ -102,9 +105,9 @@ open class AudioManager: NSObject {
     
     /// 必须要调用 start method 才能进行其他操作
     open func start(_ link: String, isLocal: Bool = false) {
-        stop(url)
         var playerItem: AVPlayerItem? = _playingMusic[link] as? AVPlayerItem
         if playerItem == nil {
+            stop(url)
             if isLocal {
                 guard let path = Bundle.main.path(forResource: link, ofType: "") else {
                     onEvents?(.error(NSError(domain: domain, code: -1, userInfo: ["msg": "link [\(link)] is invalid"])))
@@ -123,6 +126,9 @@ open class AudioManager: NSObject {
             queue.actionAtItemEnd = .none
             queue.rate = rate
             url = link
+            if !isAuto {
+                pause(link)
+            }
             
             observingTimeChanges()
             observingProps()
@@ -168,14 +174,16 @@ open class AudioManager: NSObject {
     
     /// 停止⏹音乐🎵
     open func stop(_ link: String? = nil) {
+        if let observer = timeObserver {
+            timeObserver = nil
+            queue.removeTimeObserver(observer)
+            NotificationCenter.default.removeObserver(self)
+        }
         let playerItem: AVPlayerItem? = _playingMusic[link ?? url ?? ""] as? AVPlayerItem
         if playerItem != nil {
+            seek(to: 0, link: link ?? url ?? "")
             queue.remove(playerItem!)
             _playingMusic.removeValue(forKey: link ?? url ?? "")
-        }
-        if timeObserver != nil {
-            NotificationCenter.default.removeObserver(Notification.Name.AVPlayerItemDidPlayToEndTime)
-            timeObserver = nil
         }
         playing = false
         onEvents?(.stop)
@@ -212,21 +220,22 @@ fileprivate extension AudioManager {
     }
     /// 监听时间变化
     func observingTimeChanges() {
-        if timeObserver != nil {
+        if let observer = timeObserver {
             timeObserver = nil
-        }else{
-            let time = CMTimeMake(value: 1, timescale: 1)
-            timeObserver = queue.addPeriodicTimeObserver(forInterval: time, queue: DispatchQueue.main, using: { (currentPlayerTime) in
-                self.updateLockInfo()
-            })
+            queue.removeTimeObserver(observer)
         }
+        let time = CMTimeMake(value: 1, timescale: 1)
+        timeObserver = queue.addPeriodicTimeObserver(forInterval: time, queue: DispatchQueue.main, using: { (currentPlayerTime) in
+            self.updateLockInfo()
+        })
     }
     /// 监听属性变化
     func observingProps() {
         observeStatus = queue.currentItem?.observe(\.status) {
             [unowned self] _playerItem, change in
             if _playerItem.status == .readyToPlay {
-                self.playing = true
+                self.playing = true && self.isAuto
+                self.onEvents?(.ready(self.duration))
             }else {
                 self.playing = false
             }

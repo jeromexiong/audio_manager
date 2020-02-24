@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 /// Play callback event enumeration
 enum AudioManagerEvents {
+  ready,
   buffering,
   playstatus,
   timeupdate,
@@ -45,12 +46,12 @@ class AudioManager {
   }
 
   /// Current playing time (ms
-  int get position => _position;
-  int _position = 0;
+  Duration get position => _position;
+  Duration _position = Duration(milliseconds: 0);
 
   /// Total current playing time (ms
-  int get duration => _duration;
-  int _duration = 0;
+  Duration get duration => _duration;
+  Duration _duration = Duration(milliseconds: 0);
 
   /// If there are errors, return details
   String get error => _error;
@@ -60,6 +61,8 @@ class AudioManager {
   ///
   /// `⚠️ The objects in the list must contain the URL and title properties`,
   /// otherwise the previous song will not be played if [loop] is true on its own.
+  ///
+  /// TODO: need to complete
   void setPlaybackList(List list, bool loop) {
     if (list == null || list.length == 0)
       throw "[list] can not be null or empty";
@@ -80,6 +83,10 @@ class AudioManager {
 
   Future<dynamic> _handler(MethodCall call) {
     switch (call.method) {
+      case "ready":
+        _duration = Duration(milliseconds: call.arguments ?? 0);
+        if (_events != null) _events(AudioManagerEvents.ready, _duration);
+        break;
       case "buffering":
         if (_events != null)
           _events(AudioManagerEvents.buffering, call.arguments);
@@ -89,10 +96,10 @@ class AudioManager {
         break;
       case "timeupdate":
         _error = null;
-        _position = call.arguments["position"];
-        _duration = call.arguments["duration"];
+        _position = Duration(milliseconds: call.arguments["position"] ?? 0);
+        _duration = Duration(milliseconds: call.arguments["duration"] ?? 0);
         if (!_playing) _setPlaying(true);
-        if (_position < 0 || _duration < 0) break;
+        if (_position.inMilliseconds < 0 || _duration.inMilliseconds < 0) break;
         if (_position > _duration) {
           _position = _duration;
           _setPlaying(false);
@@ -149,16 +156,24 @@ class AudioManager {
   ///
   /// `title`: Notification play title
   ///
-  /// `desc`: Notification details; `cover`: cover image address,` network` address, or `asset` address.
+  /// `desc`: Notification details; `cover`: cover image address, `network` address, or `asset` address;
+  /// `auto`: Whether to play automatically, default is true;
   Future<String> start(String url, String title,
-      {String desc, String cover}) async {
+      {String desc, String cover, bool auto}) async {
     if (url == null || url.isEmpty) return "[url] can not be null or empty";
     if (title == null || title.isEmpty)
       return "[title] can not be null or empty";
     cover = cover ?? "";
     desc = desc ?? "";
+    auto = auto ?? true;
 
-    _info = {"url": url, "title": title, "desc": desc, "cover": cover};
+    _info = {
+      "url": url,
+      "title": title,
+      "desc": desc,
+      "cover": cover,
+      "auto": auto
+    };
     _initialize = true;
     final regx = new RegExp(r'^(http|https):\/\/([\w.]+\/?)\S*');
     final result = await _channel.invokeMethod('start', {
@@ -166,6 +181,7 @@ class AudioManager {
       "title": title,
       "desc": desc,
       "cover": cover,
+      "isAuto": auto,
       "isLocal": !regx.hasMatch(url),
       "isLocalCover": !regx.hasMatch(cover),
     });
@@ -184,11 +200,13 @@ class AudioManager {
   }
 
   /// `position` Move location millisecond timestamp
-  Future<String> seekTo(int position) async {
+  Future<String> seekTo(Duration position) async {
     if (_preprocessing().isNotEmpty) return _preprocessing();
-    if (position < 0 || position > duration)
+    if (position.inMilliseconds < 0 ||
+        position.inMilliseconds > duration.inMilliseconds)
       return "[position] must be greater than 0 and less than the total duration";
-    return await _channel.invokeMethod("seekTo", {"position": position});
+    return await _channel
+        .invokeMethod("seekTo", {"position": position.inMilliseconds});
   }
 
   /// `rate` Play rate, default 1.0

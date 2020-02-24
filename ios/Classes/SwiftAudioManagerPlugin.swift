@@ -14,6 +14,8 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
         instance.registrar = registrar
         AudioManager.default.onEvents = { event in
             switch event {
+            case .ready(let duration):
+                channel.invokeMethod("ready", arguments: duration)
             case .buffering(let buffering, let buffer):
                 channel.invokeMethod("buffering", arguments: ["buffering": buffering, "buffer": buffer])
             case .playing, .pause:
@@ -60,6 +62,8 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
             if isLocal {
                 url = SwiftAudioManagerPlugin.instance.registrar.lookupKey(forAsset: url)
             }
+            let isAuto = arguments["isAuto"] as? Bool ?? true
+            AudioManager.default.isAuto = isAuto
             AudioManager.default.start(url, isLocal: isLocal)
         case "playOrPause":
             if AudioManager.default.playing {

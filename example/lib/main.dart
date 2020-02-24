@@ -14,8 +14,8 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
   bool isPlaying = false;
-  int _duration;
-  int _position;
+  Duration _duration;
+  Duration _position;
   num _slider;
   String _error;
   num curIndex = 0;
@@ -64,6 +64,10 @@ class _MyAppState extends State<MyApp> {
     AudioManager.instance.onEvents((events, args) {
       print("$events, $args");
       switch (events) {
+        case AudioManagerEvents.ready:
+          print("ready to play");
+          AudioManager.instance.seekTo(Duration(seconds: 10));
+          break;
         case AudioManagerEvents.buffering:
           print("buffering $args");
           break;
@@ -74,7 +78,7 @@ class _MyAppState extends State<MyApp> {
         case AudioManagerEvents.timeupdate:
           _duration = AudioManager.instance.duration;
           _position = AudioManager.instance.position;
-          _slider = _position / _duration;
+          _slider = _position.inMilliseconds / _duration.inMilliseconds;
           setState(() {});
           AudioManager.instance.updateLrc(args["position"].toString());
           // print(AudioManager.instance.info);
@@ -227,7 +231,8 @@ class _MyAppState extends State<MyApp> {
             },
             onChangeEnd: (value) {
               if (_duration != null) {
-                int msec = (_duration * value).round();
+                Duration msec = Duration(
+                    milliseconds: (_duration.inMilliseconds * value).round());
                 AudioManager.instance.seekTo(msec);
               }
             },
@@ -260,9 +265,8 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  String _formatDuration(int msec) {
-    if (msec == null) return "--:--";
-    Duration d = Duration(milliseconds: msec);
+  String _formatDuration(Duration d) {
+    if (d == null) return "--:--";
     int minute = d.inMinutes;
     int second = (d.inSeconds > 60) ? (d.inSeconds % 60) : d.inSeconds;
     String format = ((minute < 10) ? "0$minute" : "$minute") +

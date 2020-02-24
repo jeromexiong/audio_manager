@@ -58,6 +58,10 @@ public class MediaPlayerHelper {
          * 是否是视频播放
          */
         boolean isVideo = false;
+        /**
+         * 是否是自动播放
+         */
+        boolean isAuto = true;
 
         MediaInfo(String title, String url) {
             this.title = title;
@@ -503,7 +507,9 @@ public class MediaPlayerHelper {
                     });
                 }
                 isPrepare = true;
-                uiHolder.player.start();
+                if (mediaInfo.isAuto) {
+                    uiHolder.player.start();
+                }
                 refress_time_handler.postDelayed(refress_time_Thread, delaySecondTime);
             } catch (Exception e) {
                 onStatusCallbackNext(CallBackState.error, e.toString());

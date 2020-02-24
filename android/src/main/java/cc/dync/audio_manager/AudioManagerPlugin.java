@@ -75,6 +75,9 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
         helper.setOnStatusCallbackListener((status, args) -> {
             Log.v(TAG, "--" + status.toString());
             switch (status) {
+                case PREPARE:
+                    channel.invokeMethod("ready", helper.duration());
+                    break;
                 case buffering:
                     if (args.length == 0) return;
                     Log.v(TAG, "网络缓冲:" + args[1] + "%");
@@ -132,9 +135,11 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
 
                 boolean isLocal = call.hasArgument("isLocal") ? call.argument("isLocal") : false;
                 boolean isLocalCover = call.hasArgument("isLocalCover") ? call.argument("isLocalCover") : false;
+                boolean isAuto = call.hasArgument("isAuto") ? call.argument("isAuto") : false;
                 MediaPlayerHelper.MediaInfo info = new MediaPlayerHelper.MediaInfo(title, url);
                 info.desc = desc;
                 info.isAsset = isLocal;
+                info.isAuto = isAuto;
                 if (isLocal) {
                     if (registrar != null) {
                         info.url = registrar.lookupKeyForAsset(url);
