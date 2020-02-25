@@ -1,3 +1,7 @@
+## 0.3.1+1
+
+- Fix iOS remote command error
+
 ## 0.3.1
 
 - Add `auto` attribute whether to play automatically, default is true

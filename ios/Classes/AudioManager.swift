@@ -20,6 +20,7 @@ open class AudioManager: NSObject {
     
     private override init() {
         super.init()
+        setRemoteControl()
     }
     /// 事件回调  ⚠️使用weak防止内存泄露
     open var onEvents: ((Events)->Void)?
@@ -130,9 +131,8 @@ open class AudioManager: NSObject {
                 pause(link)
             }
             
-            observingTimeChanges()
             observingProps()
-            setRemoteControl()
+            observingTimeChanges()
             NotificationCenter.default.addObserver(self, selector: #selector(playerFinishPlaying(_:)), name: .AVPlayerItemDidPlayToEndTime, object: queue.currentItem)
         }else {
             play(link)
@@ -218,16 +218,45 @@ fileprivate extension AudioManager {
         }
         return components!
     }
-    /// 监听时间变化
-    func observingTimeChanges() {
-        if let observer = timeObserver {
-            timeObserver = nil
-            queue.removeTimeObserver(observer)
+    /// 锁屏操作
+    func setRemoteControl() {
+        let remote = MPRemoteCommandCenter.shared()
+        remote.playCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
+            self.play()
+            return .success
         }
-        let time = CMTimeMake(value: 1, timescale: 1)
-        timeObserver = queue.addPeriodicTimeObserver(forInterval: time, queue: DispatchQueue.main, using: { (currentPlayerTime) in
-            self.updateLockInfo()
-        })
+        remote.pauseCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
+            self.pause()
+            return .success
+        }
+        remote.togglePlayPauseCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
+            if self.playing {
+                self.pause()
+            }else {
+                self.play()
+            }
+            return .success
+        }
+        if #available(iOS 9.1, *) {
+            remote.changePlaybackPositionCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
+                let playback = event as! MPChangePlaybackPositionCommandEvent
+                self.seek(to: playback.positionTime)
+                return .success
+            }
+        }
+        remote.previousTrackCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
+            self.onEvents?(.previous)
+            return .success
+        }
+        remote.nextTrackCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
+            self.onEvents?(.next)
+            return .success
+        }
+    }
+    @objc func playerFinishPlaying(_ n: Notification) {
+        queue.seek(to: CMTime.zero)
+        pause()
+        onEvents?(.ended)
     }
     /// 监听属性变化
     func observingProps() {
@@ -263,10 +292,16 @@ fileprivate extension AudioManager {
             self.buffering = false
         }
     }
-    @objc func playerFinishPlaying(_ n: Notification) {
-        queue.seek(to: CMTime.zero)
-        pause()
-        onEvents?(.ended)
+    /// 监听时间变化
+    func observingTimeChanges() {
+        if let observer = timeObserver {
+            timeObserver = nil
+            queue.removeTimeObserver(observer)
+        }
+        let time = CMTimeMake(value: 1, timescale: 1)
+        timeObserver = queue.addPeriodicTimeObserver(forInterval: time, queue: DispatchQueue.main, using: { (currentPlayerTime) in
+            self.updateLockInfo()
+        })
     }
     /// 锁屏信息
     func updateLockInfo() {
@@ -305,41 +340,6 @@ fileprivate extension AudioManager {
         center.nowPlayingInfo = infos
         
         onEvents?(.timeupdate(currentTime, duration))
-    }
-    /// 锁屏操作
-    func setRemoteControl() {
-        let remote = MPRemoteCommandCenter.shared()
-        remote.playCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
-            self.play()
-            return .success
-        }
-        remote.pauseCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
-            self.pause()
-            return .success
-        }
-        remote.togglePlayPauseCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
-            if self.playing {
-                self.pause()
-            }else {
-                self.play()
-            }
-            return .success
-        }
-        if #available(iOS 9.1, *) {
-            remote.changePlaybackPositionCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
-                let playback = event as! MPChangePlaybackPositionCommandEvent
-                self.seek(to: playback.positionTime)
-                return .success
-            }
-        }
-        remote.previousTrackCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
-            self.onEvents?(.previous)
-            return .success
-        }
-        remote.nextTrackCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
-            self.onEvents?(.next)
-            return .success
-        }
     }
     @objc func audioSessionInterrupted(_ n: Notification) {
         print("\n\n\n > > > > > Error Audio Session Interrupted ","\n\n\n")
