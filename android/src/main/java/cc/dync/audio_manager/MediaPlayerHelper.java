@@ -84,7 +84,7 @@ public class MediaPlayerHelper {
         INFO("播放开始"),
         PREPARE("准备完毕"),
         progress("播放进度回调"),
-        SEEK_COMPLETE("拖动到尾端"),
+        SEEK_COMPLETE("拖动完成"),
         VIDEO_SIZE_CHANGE("读取视频大小"),
         SURFACE_CREATE("SurfaceView--Holder创建"),
         SURFACE_DESTROY("SurfaceView--Holder销毁"),

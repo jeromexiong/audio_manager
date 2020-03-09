@@ -1,3 +1,7 @@
+## 0.5.1
+
+- Add internal playlist management
+
 ## 0.3.1+1
 
 - Fix iOS remote command error
