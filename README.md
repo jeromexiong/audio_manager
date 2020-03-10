@@ -35,7 +35,7 @@ Since `Android9.0 (API 28)`, the application disables HTTP plaintext requests by
 The `audio_manager` plugin is developed in singleton mode. You only need to get`AudioManager.instance` in the method to quickly start using it.
 
 ## Quick start
-⚠️ you can use local `assets` resources or `network` resources
+⚠️ you can use local `assets`, `network` or `directory file` resources
 
 ```dart
 // Initial playback. Preloaded playback information
@@ -43,6 +43,7 @@ AudioManager.instance
 	.start(
 		"assets/audio.mp3",
 		// "network format resource"
+		// "local resource (file://${file.path})"
 		"title",
 		desc: "desc",
 		cover: "assets/ic_launcher.png",

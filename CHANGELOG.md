@@ -1,3 +1,7 @@
+## 0.5.1+1
+
+- Supports playing local directory media files
+
 ## 0.5.1
 
 - Add internal playlist management

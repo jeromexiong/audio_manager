@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:audio_manager/audio_manager.dart';
+import 'package:path_provider/path_provider.dart';
 
 void main() => runApp(MyApp());
 
@@ -31,7 +33,14 @@ class _MyAppState extends State<MyApp> {
     {
       "title": "network",
       "desc": "network resouce playback",
-      "url": "https://www.kozco.com/tech/piano2-CoolEdit.mp3",
+      "url": "https://dl.espressif.com/dl/audio/ff-16b-2c-44100hz.m4a",
+      "cover":
+          "/static/img/pub-dev-logo.svg?hash=40fqenbgtbjcekk60vd5dg5mr22bv99t"
+    },
+    {
+      "title": "file",
+      "desc": "local file",
+      "url": "test.mp3",
       "cover":
           "https://cdn.jsdelivr.net/gh/flutterchina/website@1.0/images/flutter-mark-square-100.png"
     },
@@ -52,10 +61,15 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  void setupAudio() {
+  void setupAudio() async {
     List<AudioInfo> list = [];
     this.list.forEach((item) => list.add(AudioInfo(item["url"],
         title: item["title"], desc: item["desc"], coverUrl: item["cover"])));
+    final appDocDir = await getApplicationDocumentsDirectory();
+    // Please make sure the `test.mp3` exists in the document directory
+    final file = File("${appDocDir.path}/test.mp3");
+    list.last.url = "file://${file.path}";
+
     AudioManager.instance.audioList = list;
     AudioManager.instance.intercepter = true;
     AudioManager.instance.play(auto: false);

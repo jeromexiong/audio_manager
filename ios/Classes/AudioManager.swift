@@ -116,7 +116,7 @@ open class AudioManager: NSObject {
                 }
                 playerItem = AVPlayerItem(url: URL(fileURLWithPath: path))
             }else {
-                guard let path = transformURLString(link)?.url, let _ = path.host else {
+                guard let path = transformURLString(link)?.url else {
                     onEvents?(.error(NSError(domain: domain, code: -1, userInfo: ["msg": "link [\(link)] is invalid"])))
                     return
                 }

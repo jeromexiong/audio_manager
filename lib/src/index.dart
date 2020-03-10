@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:audio_manager/src/PlayMode.dart';
 import 'package:audio_manager/src/AudioInfo.dart';
@@ -184,6 +185,14 @@ class AudioManager {
     return await play(index: 0, auto: auto);
   }
 
+  /// This will load the file from the file-URI given by:
+  /// `'file://${file.path}'`.
+  Future<String> file(File file, String title,
+      {String desc, String cover, bool auto}) async {
+    return start("file://${file.path}", title,
+        desc: desc, cover: cover, auto: auto);
+  }
+
   /// Play specified subscript audio if you want
   Future<String> play({int index, bool auto}) async {
     if (index != null && (index < 0 || index >= _audioList.length))
@@ -192,7 +201,7 @@ class AudioManager {
     _curIndex = index ?? _curIndex;
     _info = _initRandom();
 
-    final regx = new RegExp(r'^(http|https):\/\/([\w.]+\/?)\S*');
+    final regx = new RegExp(r'^(http|https|file):\/\/\/?([\w.]+\/?)\S*');
     final result = await _channel.invokeMethod('start', {
       "url": _info.url,
       "title": _info.title,

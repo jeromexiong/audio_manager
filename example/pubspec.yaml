@@ -17,6 +17,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  path_provider: ^1.6.5
   audio_manager:
     path: ../
 
