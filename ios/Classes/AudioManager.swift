@@ -11,7 +11,7 @@ import MediaPlayer
 
 open class AudioManager: NSObject {
     public enum Events {
-        case ready(_ duration: Int), stop, playing, buffering(Bool, Double), pause, ended, next, previous, timeupdate(_ position: Double, _ duration: Double), error(NSError)
+        case ready(_ duration: Int), seekComplete(_ position: Int), stop, playing, buffering(Bool, Double), pause, ended, next, previous, timeupdate(_ position: Double, _ duration: Double), error(NSError)
     }
     
     public static let `default`: AudioManager = {
@@ -147,7 +147,11 @@ open class AudioManager: NSObject {
         }
         if queue.currentItem?.status != .readyToPlay { return }
         
-        playerItem.seek(to: CMTime(seconds: position, preferredTimescale: timescale))
+        playerItem.seek(to: CMTime(seconds: position, preferredTimescale: timescale)) { (flag) in
+            if flag {
+                self.onEvents?(.seekComplete(Int(position * 1000)))
+            }
+        }
     }
     
     /// 播放▶️音乐🎵

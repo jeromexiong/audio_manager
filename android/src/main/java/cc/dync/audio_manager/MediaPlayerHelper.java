@@ -82,9 +82,9 @@ public class MediaPlayerHelper {
         error("播放错误"),
         FORMAT_NOT_SUPPORT("音视频格式可能不支持"),
         INFO("播放开始"),
-        PREPARE("准备完毕"),
+        ready("准备完毕"),
         progress("播放进度回调"),
-        SEEK_COMPLETE("拖动完成"),
+        seekComplete("拖动完成"),
         VIDEO_SIZE_CHANGE("读取视频大小"),
         SURFACE_CREATE("SurfaceView--Holder创建"),
         SURFACE_DESTROY("SurfaceView--Holder销毁"),
@@ -519,9 +519,9 @@ public class MediaPlayerHelper {
                 holderMsg = holderMsg + " height：" + uiHolder.surfaceHolder.getSurfaceFrame().height();
                 holderMsg = holderMsg + " width：" + uiHolder.surfaceHolder.getSurfaceFrame().width();
             }
-            onStatusCallbackNext(CallBackState.PREPARE, holderMsg);
+            onStatusCallbackNext(CallBackState.ready, holderMsg);
         });
-        uiHolder.player.setOnSeekCompleteListener(mp -> onStatusCallbackNext(CallBackState.SEEK_COMPLETE, mp));
+        uiHolder.player.setOnSeekCompleteListener(mp -> onStatusCallbackNext(CallBackState.seekComplete, mp));
         uiHolder.player.setOnVideoSizeChangedListener((mp, width, height) -> onStatusCallbackNext(CallBackState.VIDEO_SIZE_CHANGE, width, height));
         uiHolder.player.setOnBufferingUpdateListener((mp, percent) -> onStatusCallbackNext(CallBackState.buffering, mp, percent));
     }

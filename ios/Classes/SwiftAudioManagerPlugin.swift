@@ -16,6 +16,8 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
             switch event {
             case .ready(let duration):
                 channel.invokeMethod("ready", arguments: duration)
+            case .seekComplete(let position):
+                channel.invokeMethod("seekComplete", arguments: position)
             case .buffering(let buffering, let buffer):
                 channel.invokeMethod("buffering", arguments: ["buffering": buffering, "buffer": buffer])
             case .playing, .pause:

@@ -1,6 +1,7 @@
-## 0.5.1+1
+## 0.5.1+2
 
 - Supports playing local directory media files
+- add seek completed callback
 
 ## 0.5.1
 

@@ -75,8 +75,11 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
         helper.setOnStatusCallbackListener((status, args) -> {
             Log.v(TAG, "--" + status.toString());
             switch (status) {
-                case PREPARE:
+                case ready:
                     channel.invokeMethod("ready", helper.duration());
+                    break;
+                case seekComplete:
+                    channel.invokeMethod("seekComplete", helper.position());
                     break;
                 case buffering:
                     if (args.length == 0) return;

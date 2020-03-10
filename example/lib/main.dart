@@ -18,7 +18,7 @@ class _MyAppState extends State<MyApp> {
   bool isPlaying = false;
   Duration _duration;
   Duration _position;
-  num _slider;
+  double _slider;
   String _error;
   num curIndex = 0;
   PlayMode playMode = AudioManager.instance.playMode;
@@ -28,22 +28,14 @@ class _MyAppState extends State<MyApp> {
       "title": "Assets",
       "desc": "local assets playback",
       "url": "assets/audio.mp3",
-      "cover": "assets/ic_launcher.png"
+      "coverUrl": "assets/ic_launcher.png"
     },
     {
       "title": "network",
       "desc": "network resouce playback",
       "url": "https://dl.espressif.com/dl/audio/ff-16b-2c-44100hz.m4a",
-      "cover":
-          "/static/img/pub-dev-logo.svg?hash=40fqenbgtbjcekk60vd5dg5mr22bv99t"
-    },
-    {
-      "title": "file",
-      "desc": "local file",
-      "url": "test.mp3",
-      "cover":
-          "https://cdn.jsdelivr.net/gh/flutterchina/website@1.0/images/flutter-mark-square-100.png"
-    },
+      "coverUrl": "https://homepages.cae.wisc.edu/~ece533/images/airplane.png"
+    }
   ];
 
   @override
@@ -52,6 +44,7 @@ class _MyAppState extends State<MyApp> {
 
     initPlatformState();
     setupAudio();
+    loadFile();
   }
 
   @override
@@ -61,29 +54,35 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  void setupAudio() async {
-    List<AudioInfo> list = [];
-    this.list.forEach((item) => list.add(AudioInfo(item["url"],
-        title: item["title"], desc: item["desc"], coverUrl: item["cover"])));
-    final appDocDir = await getApplicationDocumentsDirectory();
-    // Please make sure the `test.mp3` exists in the document directory
-    final file = File("${appDocDir.path}/test.mp3");
-    list.last.url = "file://${file.path}";
+  void setupAudio() {
+    List<AudioInfo> _list = [];
+    list.forEach((item) => _list.add(AudioInfo(item["url"],
+        title: item["title"], desc: item["desc"], coverUrl: item["coverUrl"])));
 
-    AudioManager.instance.audioList = list;
+    AudioManager.instance.audioList = _list;
     AudioManager.instance.intercepter = true;
     AudioManager.instance.play(auto: false);
-    // print(AudioManager.instance.info);
 
     AudioManager.instance.onEvents((events, args) {
       print("$events, $args");
       switch (events) {
+        case AudioManagerEvents.start:
+          print("start load data callback");
+          _position = AudioManager.instance.position;
+          _duration = AudioManager.instance.duration;
+          _slider = 0;
+          setState(() {});
+          break;
         case AudioManagerEvents.ready:
           print("ready to play");
           _position = AudioManager.instance.position;
           _duration = AudioManager.instance.duration;
           setState(() {});
           AudioManager.instance.seekTo(Duration(seconds: 10));
+          break;
+        case AudioManagerEvents.seekComplete:
+          setState(() {});
+          print("seek event is completed. position is [$args]/ms");
           break;
         case AudioManagerEvents.buffering:
           print("buffering $args");
@@ -109,6 +108,19 @@ class _MyAppState extends State<MyApp> {
           break;
       }
     });
+  }
+
+  void loadFile() async {
+    final appDocDir = await getApplicationDocumentsDirectory();
+    // Please make sure the `test.mp3` exists in the document directory
+    final file = File("${appDocDir.path}/test.mp3");
+    AudioInfo info = AudioInfo("file://${file.path}",
+        title: "file",
+        desc: "local file",
+        coverUrl: "https://homepages.cae.wisc.edu/~ece533/images/baboon.png");
+
+    list.add(info.toJson());
+    AudioManager.instance.audioList.add(info);
   }
 
   Future<void> initPlatformState() async {
@@ -151,8 +163,9 @@ class _MyAppState extends State<MyApp> {
                     itemCount: list.length),
               ),
               Center(
-                  child:
-                      Text(_error != null ? _error : "lrc text: $_position")),
+                  child: Text(_error != null
+                      ? _error
+                      : "${AudioManager.instance.info.title} lrc text: $_position")),
               bottomPanel()
             ],
           ),
@@ -198,7 +211,6 @@ class _MyAppState extends State<MyApp> {
               ),
             ),
             IconButton(
-                tooltip: "下一曲",
                 iconSize: 36,
                 icon: Icon(
                   Icons.skip_next,
@@ -206,7 +218,6 @@ class _MyAppState extends State<MyApp> {
                 ),
                 onPressed: () => AudioManager.instance.next()),
             IconButton(
-                tooltip: "当前播放列表",
                 icon: Icon(
                   Icons.menu,
                   color: Colors.black,

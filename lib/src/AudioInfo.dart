@@ -12,7 +12,7 @@ class AudioInfo {
         desc = json['desc'],
         coverUrl = json['coverUrl'];
 
-  Map<String, dynamic> toJson() => {
+  Map<String, String> toJson() => {
         'url': url,
         'title': title,
         'desc': desc,
@@ -21,6 +21,6 @@ class AudioInfo {
 
   @override
   String toString() {
-    return 'Song{url: $url, title: $title, desc: $desc}';
+    return 'AudioInfo{url: $url, title: $title, desc: $desc}';
   }
 }

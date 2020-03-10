@@ -6,7 +6,9 @@ import 'package:audio_manager/src/AudioInfo.dart';
 
 /// Play callback event enumeration
 enum AudioManagerEvents {
+  start,
   ready,
+  seekComplete,
   buffering,
   playstatus,
   timeupdate,
@@ -98,6 +100,11 @@ class AudioManager {
         _duration = Duration(milliseconds: call.arguments ?? 0);
         if (_events != null) _events(AudioManagerEvents.ready, _duration);
         break;
+      case "seekComplete":
+        _position = Duration(milliseconds: call.arguments ?? 0);
+        if (_events != null)
+          _events(AudioManagerEvents.seekComplete, _position);
+        break;
       case "buffering":
         if (_events != null)
           _events(AudioManagerEvents.buffering, call.arguments);
@@ -181,7 +188,6 @@ class AudioManager {
 
     _info = AudioInfo(url, title: title, desc: desc, coverUrl: cover);
     _audioList.insert(0, _info);
-    _initialize = true;
     return await play(index: 0, auto: auto);
   }
 
@@ -193,14 +199,22 @@ class AudioManager {
         desc: desc, cover: cover, auto: auto);
   }
 
+  Future<String> startInfo(AudioInfo audio, {bool auto}) async {
+    return start(audio.url, audio.title,
+        desc: audio.desc, cover: audio.coverUrl, auto: auto);
+  }
+
   /// Play specified subscript audio if you want
   Future<String> play({int index, bool auto}) async {
     if (index != null && (index < 0 || index >= _audioList.length))
       throw "invalid index";
+    stop();
     _auto = auto ?? true;
     _curIndex = index ?? _curIndex;
     _info = _initRandom();
+    if (_events != null) _events(AudioManagerEvents.start, _info);
 
+    _initialize = true;
     final regx = new RegExp(r'^(http|https|file):\/\/\/?([\w.]+\/?)\S*');
     final result = await _channel.invokeMethod('start', {
       "url": _info.url,
@@ -246,6 +260,9 @@ class AudioManager {
   stop() {
     _channel.invokeMethod("stop");
     _initialize = false;
+    _duration = Duration(milliseconds: 0);
+    _position = Duration(milliseconds: 0);
+    _playing = false;
   }
 
   /// Update play details
@@ -254,9 +271,9 @@ class AudioManager {
     _channel.invokeMethod("updateLrc", {"lrc": lrc});
   }
 
-  /// Switch playback mode
-  PlayMode nextMode({PlayMode playMode}) {
-    int mode = (_playMode.index + 1) % 3;
+  /// Switch playback mode. `Playmode` priority is greater than `index`
+  PlayMode nextMode({PlayMode playMode, int index}) {
+    int mode = index ?? (_playMode.index + 1) % 3;
     if (playMode != null) mode = playMode.index;
     switch (mode) {
       case 0:
@@ -269,6 +286,7 @@ class AudioManager {
         _playMode = PlayMode.single;
         break;
       default:
+        _playMode = PlayMode.sequence;
         break;
     }
     return _playMode;
@@ -287,7 +305,6 @@ class AudioManager {
 
   /// play next audio
   Future<String> next() {
-    print("next audio");
     if (playMode != PlayMode.single) {
       _curIndex = (_curIndex + 1) % _audioList.length;
     }
@@ -296,7 +313,6 @@ class AudioManager {
 
   /// play previous audio
   Future<String> previous() {
-    print("previous audio");
     if (playMode != PlayMode.single) {
       num index = _curIndex - 1;
       _curIndex = index < 0 ? _audioList.length - 1 : index;
