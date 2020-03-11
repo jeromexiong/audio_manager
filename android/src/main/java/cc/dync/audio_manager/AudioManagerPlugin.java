@@ -20,11 +20,12 @@ import io.flutter.plugin.common.PluginRegistry.Registrar;
 /**
  * AudioManagerPlugin
  */
-public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, ActivityAware {
+public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, ActivityAware, VolumeChangeObserver.VolumeChangeListener {
 
     private Context context;
     private static AudioManagerPlugin instance;
     private static MethodChannel channel;
+    private VolumeChangeObserver volumeChangeObserver;
 
     private static FlutterAssets flutterAssets;
     private static Registrar registrar;
@@ -176,20 +177,31 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
                 helper.updateLrc(call.argument("lrc"));
                 break;
             case "seekTo":
-                if (!call.hasArgument("position")) {
+                try{
+                    int position = Integer.parseInt(call.argument("position").toString());
+                    helper.seekTo(position);
+                }catch (Exception ex){
                     result.success("参数错误");
-                    return;
                 }
-                int position = (int) call.argument("position");
-                helper.seekTo(position);
                 break;
             case "rate":
-                if (!call.hasArgument("rate")) {
+                try{
+                    double rate = Double.parseDouble(call.argument("rate").toString());
+                    helper.setSpeed((float) rate);
+                }catch (Exception ex){
                     result.success("参数错误");
-                    return;
                 }
-                float rate = (float) call.argument("rate");
-                helper.setSpeed(rate);
+                break;
+            case "setVolume":
+                try{
+                    double value = Double.parseDouble(call.argument("value").toString());
+                    volumeChangeObserver.setVolume(value);
+                }catch (Exception ex){
+                    result.success("参数错误");
+                }
+                break;
+            case "currentVolume":
+                result.success(volumeChangeObserver.getCurrentMusicVolume());
                 break;
             default:
                 result.notImplemented();
@@ -205,6 +217,7 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
     public void onAttachedToActivity(ActivityPluginBinding binding) {
         context = binding.getActivity();
         instance.setupPlayer(channel);
+        instance.volumeChangeObserver = new VolumeChangeObserver(context);
     }
 
     @Override
@@ -220,5 +233,10 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
     @Override
     public void onDetachedFromActivity() {
 
+    }
+
+    @Override
+    public void onVolumeChanged(double volume) {
+        channel.invokeMethod("volumeChange", volume);
     }
 }

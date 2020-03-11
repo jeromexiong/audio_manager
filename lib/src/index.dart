@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/services.dart';
 import 'package:audio_manager/src/PlayMode.dart';
 import 'package:audio_manager/src/AudioInfo.dart';
@@ -16,6 +17,7 @@ enum AudioManagerEvents {
   next,
   previous,
   ended,
+  volumeChange,
   unknow
 }
 typedef void Events(AudioManagerEvents events, args);
@@ -38,6 +40,7 @@ class AudioManager {
   AudioManager._() {
     _channel = const MethodChannel('audio_manager')
       ..setMethodCallHandler(_handler);
+    getCurrentVolume();
   }
 
   /// Current playback status
@@ -57,6 +60,10 @@ class AudioManager {
   /// Total current playing time (ms
   Duration get duration => _duration;
   Duration _duration = Duration(milliseconds: 0);
+
+  /// get current volume 0~1
+  double get volume => _volume;
+  double _volume = 0;
 
   /// If there are errors, return details
   String get error => _error;
@@ -142,6 +149,10 @@ class AudioManager {
       case "ended":
         if (_events != null) _events(AudioManagerEvents.ended, null);
         break;
+      case "volumeChange":
+        _volume = call.arguments;
+        if (_events != null) _events(AudioManagerEvents.volumeChange, _volume);
+        break;
       default:
         if (_events != null) _events(AudioManagerEvents.unknow, call.arguments);
         break;
@@ -195,12 +206,12 @@ class AudioManager {
   /// `'file://${file.path}'`.
   Future<String> file(File file, String title,
       {String desc, String cover, bool auto}) async {
-    return start("file://${file.path}", title,
+    return await start("file://${file.path}", title,
         desc: desc, cover: cover, auto: auto);
   }
 
   Future<String> startInfo(AudioInfo audio, {bool auto}) async {
-    return start(audio.url, audio.title,
+    return await start(audio.url, audio.title,
         desc: audio.desc, cover: audio.coverUrl, auto: auto);
   }
 
@@ -252,7 +263,7 @@ class AudioManager {
   /// `rate` Play rate, default 1.0
   Future<String> setSpeed(AudioManagerRate rate) async {
     if (_preprocessing().isNotEmpty) return _preprocessing();
-    int _rate = _rates[rate.index];
+    double _rate = _rates[rate.index];
     return await _channel.invokeMethod("seekTo", {"rate": _rate});
   }
 
@@ -304,19 +315,34 @@ class AudioManager {
   }
 
   /// play next audio
-  Future<String> next() {
+  Future<String> next() async {
     if (playMode != PlayMode.single) {
       _curIndex = (_curIndex + 1) % _audioList.length;
     }
-    return play();
+    return await play();
   }
 
   /// play previous audio
-  Future<String> previous() {
+  Future<String> previous() async {
     if (playMode != PlayMode.single) {
       num index = _curIndex - 1;
       _curIndex = index < 0 ? _audioList.length - 1 : index;
     }
-    return play();
+    return await play();
+  }
+
+  /// setVolume. `showVolume`: show volume view or not and this is only in iOS
+  Future<String> setVolume(double value, {bool showVolume = true}) async {
+    var volume = min(value, 1);
+    value = max(value, 0);
+    final result = await _channel
+        .invokeMethod("setVolume", {"value": volume, "showVolume": showVolume});
+    return result;
+  }
+
+  /// get current volume
+  Future<double> getCurrentVolume() async {
+    _volume = await _channel.invokeMethod("currentVolume");
+    return _volume;
   }
 }

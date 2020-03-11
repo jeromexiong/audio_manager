@@ -11,7 +11,7 @@ import MediaPlayer
 
 open class AudioManager: NSObject {
     public enum Events {
-        case ready(_ duration: Int), seekComplete(_ position: Int), stop, playing, buffering(Bool, Double), pause, ended, next, previous, timeupdate(_ position: Double, _ duration: Double), error(NSError)
+        case ready(_ duration: Int), seekComplete(_ position: Int), stop, playing, buffering(Bool, Double), pause, ended, next, previous, timeupdate(_ position: Double, _ duration: Double), error(NSError), volumeChange(Float)
     }
     
     public static let `default`: AudioManager = {
@@ -21,6 +21,10 @@ open class AudioManager: NSObject {
     private override init() {
         super.init()
         setRemoteControl()
+        NotificationCenter.default.addObserver(self, selector: #selector(volumeChange(n:)), name: NSNotification.Name(rawValue: "AVSystemController_SystemVolumeDidChangeNotification"), object: nil)
+    }
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     /// 事件回调  ⚠️使用weak防止内存泄露
     open var onEvents: ((Events)->Void)?
@@ -82,11 +86,11 @@ open class AudioManager: NSObject {
     fileprivate var observeLoaded: NSKeyValueObservation?
     fileprivate var observeBufferEmpty: NSKeyValueObservation?
     fileprivate var observeCanPlay: NSKeyValueObservation?
+    fileprivate let session = AVAudioSession.sharedInstance()
     
     /// 注册后台播放
     /// register in application didFinishLaunchingWithOptions method
     open func registerBackground(){
-        let session = AVAudioSession.sharedInstance()
         do{
             try session.setActive(true)
             try session.setCategory(AVAudioSession.Category.playback)
@@ -198,6 +202,48 @@ open class AudioManager: NSObject {
         stop()
         queue.removeAllItems()
         _playingMusic.removeAll()
+    }
+    
+    fileprivate lazy var volumeView: MPVolumeView = {
+        let volumeView = MPVolumeView()
+        volumeView.frame = CGRect(x: -100, y: -100, width: 40, height: 40)
+        return volumeView
+    }()
+    /// 是否显示音量视图
+    open var showVolumeView: Bool = false {
+        didSet {
+            if showVolumeView {
+                UIApplication.shared.windows.first?.addSubview(volumeView)
+            }else {
+                volumeView.removeFromSuperview()
+            }
+        }
+    }
+    /// 设置音量大小 0~1
+    open func setVolume(_ value: Float, show volume: Bool = true) {
+        var value = min(value, 1)
+        value = max(value, 0)
+        let volumeView = MPVolumeView()
+        var slider = UISlider()
+        for view in volumeView.subviews {
+            if NSStringFromClass(view.classForCoder) == "MPVolumeSlider" {
+                slider = view as! UISlider
+                break
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now()+0.01) {
+            slider.value = value
+        }
+        if volume {
+            if !showVolumeView {
+                showVolumeView = true
+            }
+        }else {
+            showVolumeView = false
+        }
+    }
+    open var currentVolume: Float {
+        return session.outputVolume
     }
 }
 fileprivate extension AudioManager {
@@ -396,6 +442,20 @@ fileprivate extension AudioManager {
                 }
             }
         default: ()
+        }
+    }
+    @objc func volumeChange(n: Notification){
+        guard let userInfo = n.userInfo, let parameter = userInfo["AVSystemController_AudioCategoryNotificationParameter"] as? String,
+            let reason = userInfo["AVSystemController_AudioVolumeChangeReasonNotificationParameter"] as? String,
+            let _volume = userInfo["AVSystemController_AudioVolumeNotificationParameter"] as? NSNumber else {
+                return
+        }
+        if (parameter == "Audio/Video") {
+            if (reason == "ExplicitVolumeChange") {
+                let volume = _volume.floatValue
+                print("当前音量\(volume)")
+                self.onEvents?(.volumeChange(volume))
+            }
         }
     }
 }

@@ -1,7 +1,8 @@
-## 0.5.1+2
+## 0.5.1+3
 
 - Supports playing local directory media files
 - add seek completed callback
+- Add volume control
 
 ## 0.5.1
 
