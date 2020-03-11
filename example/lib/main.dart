@@ -345,7 +345,7 @@ class _MyAppState extends State<MyApp> {
                 onChanged: (value) {
                   setState(() {
                     _sliderVolume = value;
-                    AudioManager.instance.setVolume(value);
+                    AudioManager.instance.setVolume(value, showVolume: true);
                   });
                 },
               )))

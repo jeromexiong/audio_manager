@@ -1,4 +1,4 @@
-## 0.5.1+3
+## 0.5.1+4
 
 - Supports playing local directory media files
 - add seek completed callback

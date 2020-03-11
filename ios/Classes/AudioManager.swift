@@ -213,9 +213,9 @@ open class AudioManager: NSObject {
     open var showVolumeView: Bool = false {
         didSet {
             if showVolumeView {
-                UIApplication.shared.windows.first?.addSubview(volumeView)
-            }else {
                 volumeView.removeFromSuperview()
+            }else {
+                UIApplication.shared.windows.first?.addSubview(volumeView)
             }
         }
     }
