@@ -20,11 +20,12 @@ import io.flutter.plugin.common.PluginRegistry.Registrar;
 /**
  * AudioManagerPlugin
  */
-public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, ActivityAware, VolumeChangeObserver.VolumeChangeListener {
+public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, VolumeChangeObserver.VolumeChangeListener {
 
-    private Context context;
     private static AudioManagerPlugin instance;
-    private static MethodChannel channel;
+    private Context context;
+    private MethodChannel channel;
+    private MediaPlayerHelper helper;
     private VolumeChangeObserver volumeChangeObserver;
 
     private static FlutterAssets flutterAssets;
@@ -46,8 +47,9 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
         final MethodChannel channel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "audio_manager");
+
         channel.setMethodCallHandler(getInstance());
-        AudioManagerPlugin.channel = channel;
+        setup(flutterPluginBinding.getApplicationContext(), channel);
         AudioManagerPlugin.flutterAssets = flutterPluginBinding.getFlutterAssets();
     }
 
@@ -66,13 +68,28 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
     // be defined
     // in the same class.
     public static void registerWith(Registrar registrar) {
-        channel = new MethodChannel(registrar.messenger(), "audio_manager");
+        MethodChannel channel = new MethodChannel(registrar.messenger(), "audio_manager");
+
         channel.setMethodCallHandler(getInstance());
+        instance.setup(registrar.activity(), channel);
         AudioManagerPlugin.registrar = registrar;
     }
 
-    private void setupPlayer(MethodChannel channel) {
-        MediaPlayerHelper helper = MediaPlayerHelper.getInstance(context);
+    private void setup(Context context, MethodChannel channel) {
+        instance.context = context;
+        instance.channel = channel;
+
+        instance.helper = MediaPlayerHelper.getInstance(instance.context);
+        setupPlayer();
+        volumeChangeObserver = new VolumeChangeObserver(instance.context);
+        volumeChangeObserver.setVolumeChangeListener(instance);
+        volumeChangeObserver.registerReceiver();
+    }
+
+    private void setupPlayer() {
+        MediaPlayerHelper helper = instance.helper;
+        MethodChannel channel = instance.channel;
+
         helper.setOnStatusCallbackListener((status, args) -> {
             Log.v(TAG, "--" + status.toString());
             switch (status) {
@@ -126,7 +143,7 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
 
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
-        MediaPlayerHelper helper = MediaPlayerHelper.getInstance(context);
+        MediaPlayerHelper helper = instance.helper;
         switch (call.method) {
             case "getPlatformVersion":
                 result.success("Android " + android.os.Build.VERSION.RELEASE);
@@ -177,31 +194,31 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
                 helper.updateLrc(call.argument("lrc"));
                 break;
             case "seekTo":
-                try{
+                try {
                     int position = Integer.parseInt(call.argument("position").toString());
                     helper.seekTo(position);
-                }catch (Exception ex){
+                } catch (Exception ex) {
                     result.success("参数错误");
                 }
                 break;
             case "rate":
-                try{
+                try {
                     double rate = Double.parseDouble(call.argument("rate").toString());
                     helper.setSpeed((float) rate);
-                }catch (Exception ex){
+                } catch (Exception ex) {
                     result.success("参数错误");
                 }
                 break;
             case "setVolume":
-                try{
+                try {
                     double value = Double.parseDouble(call.argument("value").toString());
-                    volumeChangeObserver.setVolume(value);
-                }catch (Exception ex){
+                    instance.volumeChangeObserver.setVolume(value);
+                } catch (Exception ex) {
                     result.success("参数错误");
                 }
                 break;
             case "currentVolume":
-                result.success(volumeChangeObserver.getCurrentMusicVolume());
+                result.success(instance.volumeChangeObserver.getCurrentMusicVolume());
                 break;
             default:
                 result.notImplemented();
@@ -214,29 +231,7 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Act
     }
 
     @Override
-    public void onAttachedToActivity(ActivityPluginBinding binding) {
-        context = binding.getActivity();
-        instance.setupPlayer(channel);
-        instance.volumeChangeObserver = new VolumeChangeObserver(context);
-    }
-
-    @Override
-    public void onDetachedFromActivityForConfigChanges() {
-
-    }
-
-    @Override
-    public void onReattachedToActivityForConfigChanges(ActivityPluginBinding binding) {
-
-    }
-
-    @Override
-    public void onDetachedFromActivity() {
-
-    }
-
-    @Override
     public void onVolumeChanged(double volume) {
-        channel.invokeMethod("volumeChange", volume);
+        instance.channel.invokeMethod("volumeChange", volume);
     }
 }
