@@ -4,7 +4,7 @@
 A flutter plugin for music playback, including notification handling.
 > This plugin is developed for iOS based on AVPlayer, while android is based on mediaplayer
 
-<img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/android.png" height="300" alt="The example app running in Android"><img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/iOS.png" height="300" alt="The example app running in iOS">
+<img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/android.png" height="300" alt="The example app running in Android"><img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/android2.png" height="300" alt="The example app running in Android"><img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/iOS.png" height="300" alt="The example app running in iOS">
 
 ## iOS
 Add the following permissions in the `info.plist` file
@@ -29,13 +29,14 @@ Since `Android9.0 (API 28)`, the application disables HTTP plaintext requests by
 	...
 >
 ```
-> Android minimum support version 23 **(build.gradle -> minSdkVersion: 23)**
+- ⚠️ Android minimum supported version 23 `(app/build.gradle -> minSdkVersion: 23)`
+- ⚠️ Android minimum supported Gradle version is 5.4.1 `(gradle-wrapper.properties -> gradle-5.4.1-all.zip)`
 
 ## How to use?
 The `audio_manager` plugin is developed in singleton mode. You only need to get`AudioManager.instance` in the method to quickly start using it.
 
 ## Quick start
-⚠️ you can use local `assets`, `network` or `directory file` resources
+you can use local `assets`, `directory file` or `network` resources
 
 ```dart
 // Initial playback. Preloaded playback information

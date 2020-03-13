@@ -109,7 +109,7 @@ class AudioManager {
         break;
       case "seekComplete":
         _position = Duration(milliseconds: call.arguments ?? 0);
-        if (_events != null)
+        if (_events != null && _duration.inMilliseconds != 0)
           _events(AudioManagerEvents.seekComplete, _position);
         break;
       case "buffering":
@@ -124,7 +124,8 @@ class AudioManager {
         _position = Duration(milliseconds: call.arguments["position"] ?? 0);
         _duration = Duration(milliseconds: call.arguments["duration"] ?? 0);
         if (!_playing) _setPlaying(true);
-        if (_position.inMilliseconds < 0 || _duration.inMilliseconds < 0) break;
+        if (_position.inMilliseconds < 0 || _duration.inMilliseconds <= 0)
+          break;
         if (_position > _duration) {
           _position = _duration;
           _setPlaying(false);

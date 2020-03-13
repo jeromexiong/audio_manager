@@ -1,3 +1,7 @@
+## 0.5.2
+
+- remove `AndroidManifast.xml` redundant configuration
+
 ## 0.5.1+5
 
 - Supports playing local directory media files
