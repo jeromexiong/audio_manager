@@ -4,7 +4,7 @@
 A flutter plugin for music playback, including notification handling.
 > This plugin is developed for iOS based on AVPlayer, while android is based on mediaplayer
 
-<img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/android.png" height="300" alt="The example app running in Android"><img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/android2.png" height="300" alt="The example app running in Android"><img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/iOS.png" height="300" alt="The example app running in iOS">
+<img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/android.png" height="300" alt="The example app running in Android"><img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/android2.png" height="300" alt="The example app running in Android"><img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/iOS.png" height="300" alt="The example app running in iOS"><img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/iOS2.jpeg" height="300" alt="The example app running in iOS">
 
 ## iOS
 Add the following permissions in the `info.plist` file
@@ -19,6 +19,7 @@ Add the following permissions in the `info.plist` file
 		<true/>
 	</dict>
 ```
+- ⚠️ Some methods are invalid in the simulator, please use the real machine
 
 ## Android
 Since `Android9.0 (API 28)`, the application disables HTTP plaintext requests by default. To allow requests, add `android:usesCleartextTraffic="true"` in `AndroidManifest.xml`

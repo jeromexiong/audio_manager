@@ -7,16 +7,27 @@ import 'package:audio_manager/src/AudioInfo.dart';
 
 /// Play callback event enumeration
 enum AudioManagerEvents {
+  /// start load data
   start,
+
+  /// ready to play. If you want to invoke [seekTo], you must follow this callback
   ready,
+
+  /// seek completed
   seekComplete,
+
+  /// buffering size
   buffering,
+
+  /// [isPlaying] status
   playstatus,
   timeupdate,
   error,
   next,
   previous,
   ended,
+
+  /// ⚠️ IOS simulator is invalid, please use real machine
   volumeChange,
   unknow
 }
@@ -251,7 +262,9 @@ class AudioManager {
     return "playOrPause: $result";
   }
 
-  /// `position` Move location millisecond timestamp
+  /// `position` Move location millisecond timestamp.
+  ///
+  /// ⚠️ You must be [AudioManagerEvents.ready] before you can change the playback progress
   Future<String> seekTo(Duration position) async {
     if (_preprocessing().isNotEmpty) return _preprocessing();
     if (position.inMilliseconds < 0 ||
@@ -333,6 +346,7 @@ class AudioManager {
   }
 
   /// setVolume. `showVolume`: show volume view or not and this is only in iOS
+  /// ⚠️ IOS simulator is invalid, please use real machine
   Future<String> setVolume(double value, {bool showVolume = true}) async {
     var volume = min(value, 1);
     value = max(value, 0);
