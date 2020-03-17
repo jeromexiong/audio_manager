@@ -1,6 +1,7 @@
-## 0.5.2
+## 0.5.2+1
 
 - remove `AndroidManifast.xml` redundant configuration
+- Optimize playback status updates
 
 ## 0.5.1+5
 

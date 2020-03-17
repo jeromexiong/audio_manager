@@ -58,6 +58,7 @@ class AudioManager {
   bool get isPlaying => _playing;
   bool _playing = false;
   void _setPlaying(bool playing) {
+    if (_playing == playing) return;
     _playing = playing;
     if (_events != null) {
       _events(AudioManagerEvents.playstatus, _playing);
@@ -256,10 +257,11 @@ class AudioManager {
   /// ⚠️ Must be preloaded
   ///
   /// [return] Returns the current playback status
-  Future<String> playOrPause() async {
-    if (_preprocessing().isNotEmpty) return _preprocessing();
-    bool result = await _channel.invokeMethod("playOrPause");
-    return "playOrPause: $result";
+  Future<bool> playOrPause() async {
+    if (_preprocessing().isNotEmpty) throw _preprocessing();
+    bool playing = await _channel.invokeMethod("playOrPause");
+    _setPlaying(playing);
+    return playing;
   }
 
   /// `position` Move location millisecond timestamp.
@@ -345,9 +347,9 @@ class AudioManager {
     return await play();
   }
 
-  /// setVolume. `showVolume`: show volume view or not and this is only in iOS
+  /// set volume range(0~1). `showVolume`: show volume view or not and this is only in iOS
   /// ⚠️ IOS simulator is invalid, please use real machine
-  Future<String> setVolume(double value, {bool showVolume = true}) async {
+  Future<String> setVolume(double value, {bool showVolume = false}) async {
     var volume = min(value, 1);
     value = max(value, 0);
     final result = await _channel

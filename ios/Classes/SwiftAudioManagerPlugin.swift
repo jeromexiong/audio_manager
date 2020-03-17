@@ -97,7 +97,7 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
                 result("参数错误")
                 return
             }
-            let showVolume = arguments["showVolume"] as? Bool ?? true
+            let showVolume = arguments["showVolume"] as? Bool ?? false
             AudioManager.default.setVolume(Float(value), show: showVolume)
         case "currentVolume":
             result(AudioManager.default.currentVolume)

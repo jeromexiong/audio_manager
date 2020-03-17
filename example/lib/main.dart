@@ -212,8 +212,8 @@ class _MyAppState extends State<MyApp> {
                 onPressed: () => AudioManager.instance.previous()),
             IconButton(
               onPressed: () async {
-                String status = await AudioManager.instance.playOrPause();
-                print("await -- $status");
+                bool playing = await AudioManager.instance.playOrPause();
+                print("await -- $playing");
               },
               padding: const EdgeInsets.all(0.0),
               icon: Icon(
