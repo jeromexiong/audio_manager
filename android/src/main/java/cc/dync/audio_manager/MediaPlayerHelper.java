@@ -143,8 +143,7 @@ public class MediaPlayerHelper {
      * @return 实例
      */
     private MediaPlayerHelper bindService() {
-//        MediaPlayerService.setSmallIcon(R.drawable.ic_launcher1);
-        MediaPlayerService.bindService(context, (events, args) -> {
+        MediaPlayerService.bindService((events, args) -> {
             switch (events) {
                 case binder:
                     service = (MediaPlayerService) args[0];
@@ -206,10 +205,10 @@ public class MediaPlayerHelper {
         if (!mediaInfo.isVideo) bindService();
 
         if (mediaInfo.isAsset) {
-            if (!checkAvalable(mediaInfo.url)) {
-                onStatusCallbackNext(CallBackState.FORMAT_NOT_SUPPORT, mediaInfo.url);
-                return;
-            }
+//            if (!checkAvalable(mediaInfo.url)) {
+//                onStatusCallbackNext(CallBackState.FORMAT_NOT_SUPPORT, mediaInfo.url);
+//                return;
+//            }
             if (mediaInfo.isVideo) {
                 if (isHolderCreate) {
                     beginPlayAsset(mediaInfo.url);
@@ -219,20 +218,20 @@ public class MediaPlayerHelper {
             } else {
                 beginPlayAsset(mediaInfo.url);
             }
-            curUrl = mediaInfo.url;
-            return;
-        }
-        // 通过文件路径播放音视频
-        if (mediaInfo.isVideo) {
-            if (isHolderCreate) {
-                beginPlayUrl(mediaInfo.url);
-            } else {
-                setOnHolderCreateListener(() -> beginPlayUrl(mediaInfo.url));
-            }
         } else {
-            beginPlayUrl(mediaInfo.url);
+            if (mediaInfo.isVideo) {
+                if (isHolderCreate) {
+                    beginPlayUrl(mediaInfo.url);
+                } else {
+                    setOnHolderCreateListener(() -> beginPlayUrl(mediaInfo.url));
+                }
+            } else {
+                beginPlayUrl(mediaInfo.url);
+            }
         }
+
         curUrl = mediaInfo.url;
+        isPrepare = false;
     }
 
     /**
@@ -241,10 +240,10 @@ public class MediaPlayerHelper {
      * @param assetName 名字,带后缀，比如:text.mp3
      */
     public void playAsset(String assetName, boolean isVideo) {
-        if (!checkAvalable(assetName)) {
-            onStatusCallbackNext(CallBackState.FORMAT_NOT_SUPPORT, assetName);
-            return;
-        }
+//        if (!checkAvalable(assetName)) {
+//            onStatusCallbackNext(CallBackState.FORMAT_NOT_SUPPORT, assetName);
+//            return;
+//        }
         if (isVideo) {
             if (isHolderCreate) {
                 beginPlayAsset(assetName);
@@ -319,20 +318,20 @@ public class MediaPlayerHelper {
         if (!canPlay()) return;
         if (isPlaying()) return;
         uiHolder.player.start();
+        onStatusCallbackNext(CallBackState.playOrPause, isPlaying());
 
         if (service != null)
-            service.updateNotification(isPlaying(), mediaInfo.title, mediaInfo.desc);
-        onStatusCallbackNext(CallBackState.playOrPause, isPlaying());
+            service.updateNotification(isPlaying(), mediaInfo.title, null);
     }
 
     void pause() {
         if (!canPlay()) return;
         if (!isPlaying()) return;
         uiHolder.player.pause();
+        onStatusCallbackNext(CallBackState.playOrPause, isPlaying());
 
         if (service != null)
-            service.updateNotification(isPlaying(), mediaInfo.title, mediaInfo.desc);
-        onStatusCallbackNext(CallBackState.playOrPause, isPlaying());
+            service.updateNotification(isPlaying(), mediaInfo.title, null);
     }
 
     void playOrPause() {
@@ -342,10 +341,10 @@ public class MediaPlayerHelper {
         } else {
             uiHolder.player.start();
         }
-        if (service != null)
-            service.updateNotification(isPlaying(), mediaInfo.title, mediaInfo.desc);
-
         onStatusCallbackNext(CallBackState.playOrPause, isPlaying());
+
+        if (service != null)
+            service.updateNotification(isPlaying(), mediaInfo.title, null);
     }
 
     private boolean canPlay() {
@@ -474,6 +473,7 @@ public class MediaPlayerHelper {
         }
         this.context = context;
         this.uiHolder = new Holder();
+        MediaPlayerService.registerReceiver(context);
 //        uiHolder.player = new MediaPlayer();
 //        keepAlive();
 //        initPlayerListener();

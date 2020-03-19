@@ -71,7 +71,7 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
         MethodChannel channel = new MethodChannel(registrar.messenger(), "audio_manager");
 
         channel.setMethodCallHandler(getInstance());
-        instance.setup(registrar.activity(), channel);
+        instance.setup(registrar.context(), channel);
         AudioManagerPlugin.registrar = registrar;
     }
 

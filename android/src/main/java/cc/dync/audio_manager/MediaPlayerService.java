@@ -22,8 +22,10 @@ import android.widget.RemoteViews;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Objects;
 
@@ -79,11 +81,9 @@ public class MediaPlayerService extends Service {
     private static MediaPlayerService bindService;
     private static boolean isBindService = false;
     private static Context context;
-    private static int smallIcon;
 
-    // 绑定服务
-    public static void bindService(Context context, ServiceEvents serviceEvents) {
-        MediaPlayerService.context = context;
+    // 绑定服务 必须先调用 registerReceiver
+    public static void bindService(ServiceEvents serviceEvents) {
         MediaPlayerService.serviceEvents = serviceEvents;
 
         if (!MediaPlayerService.isBindService) {
@@ -94,8 +94,15 @@ public class MediaPlayerService extends Service {
              * flags：BIND_AUTO_CREATE, BIND_DEBUG_UNBIND, BIND_NOT_FOREGROUND, BIND_ABOVE_CLIENT, BIND_ALLOW_OOM_MANAGEMENT, or BIND_WAIVE_PRIORITY.
              */
             context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
+        } else {
+            if (serviceEvents != null) serviceEvents.onEvents(Events.binder, bindService);
         }
 
+    }
+
+    /// 通知事件处理，只能加载一次，否则会重复
+    public static void registerReceiver(Context context) {
+        MediaPlayerService.context = context;
         // 注册广播
         BroadcastReceiver playerReceiver = new BroadcastReceiver() {
             @Override
@@ -159,11 +166,6 @@ public class MediaPlayerService extends Service {
 
     };
 
-    public static void setSmallIcon(int icon) {
-        smallIcon = icon;
-    }
-
-
     //    private static final int DELETE_PENDING_REQUESTS = 1022;
     private static final int CONTENT_PENDING_REQUESTS = 1023;
     private static final int NEXT_PENDING_REQUESTS = 1024;
@@ -201,11 +203,11 @@ public class MediaPlayerService extends Service {
 
         builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
                 // 设置状态栏小图标
-                .setSmallIcon(MediaPlayerService.smallIcon != 0 ? smallIcon : R.drawable.ic_launcher)
+                .setSmallIcon(R.drawable.ic_launcher)
                 // 设置标题
-                .setContentTitle("AudioManager")
+                .setContentTitle("")
                 // 设置内容
-                .setContentText("内容")
+                .setContentText("")
                 // 点击通知后自动清除
                 .setAutoCancel(false)
                 // 设置点击通知效果
@@ -231,20 +233,19 @@ public class MediaPlayerService extends Service {
     void updateCover(String url) {
         if (url.contains("http")) {
             new Thread(() -> {
-                try {
-                    URL picUrl = new URL(url);
-                    Bitmap bitmap = BitmapFactory.decodeStream(picUrl.openStream());
+                Bitmap bitmap = getBitmapFromUrl(url);
+                if (bitmap != null) {
                     views.setImageViewBitmap(R.id.image, bitmap);
-                } catch (Exception e) {
-                    e.printStackTrace();
+                    notificationManager.notify(NOTIFICATION_PENDING_ID, builder.build());
                 }
             }).start();
             return;
         }
-        AssetManager am = context.getAssets();
         try {
+            AssetManager am = context.getAssets();
             InputStream inputStream = am.open(url);
             views.setImageViewBitmap(R.id.image, BitmapFactory.decodeStream(inputStream));
+            notificationManager.notify(NOTIFICATION_PENDING_ID, builder.build());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -258,7 +259,7 @@ public class MediaPlayerService extends Service {
     void updateNotification(boolean isPlaying, String title, String desc) {
         if (views != null) {
             views.setTextViewText(R.id.tv_name, title);
-            views.setTextViewText(R.id.tv_author, desc);
+            if (desc != null) views.setTextViewText(R.id.tv_author, desc);
             if (isPlaying) {
                 views.setTextViewText(R.id.tv_pause, "暂停");
             } else {
@@ -268,5 +269,29 @@ public class MediaPlayerService extends Service {
 
         // 刷新notification
         notificationManager.notify(NOTIFICATION_PENDING_ID, builder.build());
+    }
+
+    // 网络获取图片
+    private Bitmap getBitmapFromUrl(String urlString) {
+        Bitmap bitmap;
+        InputStream is = null;
+        try {
+            URL url = new URL(urlString);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            is = new BufferedInputStream(connection.getInputStream());
+            bitmap = BitmapFactory.decodeStream(is);
+            connection.disconnect();
+            return bitmap;
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                assert is != null;
+                is.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
     }
 }
