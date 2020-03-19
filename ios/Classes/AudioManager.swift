@@ -100,12 +100,28 @@ open class AudioManager: NSObject {
                 try session.setCategory(.playback, options: .allowBluetoothA2DP)
             }
             try session.overrideOutputAudioPort(AVAudioSession.PortOverride.speaker)
-            NotificationCenter.default.addObserver(self, selector: #selector(handleRouteChange(_:)), name: AVAudioSession.routeChangeNotification, object: nil)
             
         }catch{
             onEvents?(.error(error as NSError))
         }
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(handleRouteChange(_:)), name: AVAudioSession.routeChangeNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(audioSessionInterrupted(_:)), name: AVAudioSession.interruptionNotification, object: nil)
+    }
+    
+    fileprivate var interrupterStatus = false
+    /// 中断结束后继续播放
+    /// register in application applicationDidBecomeActive
+    open func interrupterAction(_ isplay: Bool = false) {
+        if playing {
+            pause()
+            interrupterStatus = true
+            return
+        }
+        if interrupterStatus && isplay {
+            play()
+            interrupterStatus = false
+        }
     }
     
     /// 必须要调用 start method 才能进行其他操作
@@ -392,29 +408,25 @@ fileprivate extension AudioManager {
         onEvents?(.timeupdate(currentTime, duration))
     }
     @objc func audioSessionInterrupted(_ n: Notification) {
-        print("\n\n\n > > > > > Error Audio Session Interrupted ","\n\n\n")
+        print("\n\n\n > > > > > Error Audio Session Interrupted \n\n\n")
         guard let userInfo = n.userInfo,
             let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
             let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
                 return
         }
-        switch type {
-            
-        case .began:
-            // Interruption began, take appropriate actions
-            break
-        case .ended:
+        if type == .began {
+            print("Interruption began, take appropriate actions")
+            interrupterAction()
+        }else {
+            interrupterAction(true)
             if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt {
                 let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
                 if options.contains(.shouldResume) {
-                    // Interruption Ended - playback should resume
+                    print("Interruption Ended - playback should resume")
                 } else {
-                    // Interruption Ended - playback should NOT resume
+                    print("Interruption Ended - playback should NOT resume")
                 }
             }
-            break
-        @unknown default:
-            break
         }
     }
     @objc func handleRouteChange(_ n: Notification) {

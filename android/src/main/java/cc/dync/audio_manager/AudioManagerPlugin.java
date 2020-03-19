@@ -187,6 +187,14 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
                 helper.playOrPause();
                 result.success(helper.isPlaying());
                 break;
+            case "play":
+                helper.play();
+                result.success(helper.isPlaying());
+                break;
+            case "pause":
+                helper.pause();
+                result.success(helper.isPlaying());
+                break;
             case "stop":
                 helper.stop();
                 break;

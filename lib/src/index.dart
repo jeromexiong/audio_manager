@@ -2,40 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/services.dart';
-import 'package:audio_manager/src/PlayMode.dart';
+import 'package:audio_manager/src/AudioType.dart';
 import 'package:audio_manager/src/AudioInfo.dart';
-
-/// Play callback event enumeration
-enum AudioManagerEvents {
-  /// start load data
-  start,
-
-  /// ready to play. If you want to invoke [seekTo], you must follow this callback
-  ready,
-
-  /// seek completed
-  seekComplete,
-
-  /// buffering size
-  buffering,
-
-  /// [isPlaying] status
-  playstatus,
-  timeupdate,
-  error,
-  next,
-  previous,
-  ended,
-
-  /// ⚠️ IOS simulator is invalid, please use real machine
-  volumeChange,
-  unknow
-}
-typedef void Events(AudioManagerEvents events, args);
-
-/// Play rate enumeration [0.5, 0.75, 1, 1.5, 1.75, 2]
-enum AudioManagerRate { rate50, rate75, rate100, rate150, rate175, rate200 }
-const _rates = [0.5, 0.75, 1, 1.5, 1.75, 2];
 
 class AudioManager {
   static AudioManager _instance;
@@ -53,6 +21,10 @@ class AudioManager {
       ..setMethodCallHandler(_handler);
     getCurrentVolume();
   }
+
+  /// 是否资源加载中
+  bool get isLoading => _isLoading;
+  bool _isLoading = true;
 
   /// Current playback status
   bool get isPlaying => _playing;
@@ -116,6 +88,7 @@ class AudioManager {
   Future<dynamic> _handler(MethodCall call) {
     switch (call.method) {
       case "ready":
+        _isLoading = false;
         _duration = Duration(milliseconds: call.arguments ?? 0);
         if (_events != null) _events(AudioManagerEvents.ready, _duration);
         break;
@@ -129,7 +102,7 @@ class AudioManager {
           _events(AudioManagerEvents.buffering, call.arguments);
         break;
       case "playstatus":
-        _setPlaying(call.arguments);
+        _setPlaying(call.arguments ?? false);
         break;
       case "timeupdate":
         _error = null;
@@ -175,11 +148,18 @@ class AudioManager {
 
   bool _initialize;
   String _preprocessing() {
-    if (_info == null) return "you must invoke the [start] method first";
-    if (_error != null) return _error;
+    var errMsg = "";
+    if (_info == null) errMsg = "you must invoke the [start] method first";
+    if (_error != null) errMsg = _error;
     if (_initialize != null && !_initialize)
-      return "you must invoke the [start] method after calling the [stop] method";
-    return "";
+      errMsg =
+          "you must invoke the [start] method after calling the [stop] method";
+    if (_isLoading) errMsg = "audio resource loading....";
+
+    if (errMsg.isNotEmpty) {
+      if (_events != null) _events(AudioManagerEvents.error, errMsg);
+    }
+    return errMsg;
   }
 
   Events _events;
@@ -238,6 +218,7 @@ class AudioManager {
     _info = _initRandom();
     if (_events != null) _events(AudioManagerEvents.start, _info);
 
+    _isLoading = true;
     _initialize = true;
     final regx = new RegExp(r'^(http|https|file):\/\/\/?([\w.]+\/?)\S*');
     final result = await _channel.invokeMethod('start', {
@@ -258,8 +239,24 @@ class AudioManager {
   ///
   /// [return] Returns the current playback status
   Future<bool> playOrPause() async {
-    if (_preprocessing().isNotEmpty) throw _preprocessing();
+    if (_preprocessing().isNotEmpty) return false;
     bool playing = await _channel.invokeMethod("playOrPause");
+    _setPlaying(playing);
+    return playing;
+  }
+
+  /// to play status
+  Future<bool> toPlay() async {
+    if (_preprocessing().isNotEmpty) return false;
+    bool playing = await _channel.invokeMethod("play");
+    _setPlaying(playing);
+    return playing;
+  }
+
+  /// to pause status
+  Future<bool> toPause() async {
+    if (_preprocessing().isNotEmpty) return false;
+    bool playing = await _channel.invokeMethod("pause");
     _setPlaying(playing);
     return playing;
   }
@@ -276,11 +273,12 @@ class AudioManager {
         .invokeMethod("seekTo", {"position": position.inMilliseconds});
   }
 
-  /// `rate` Play rate, default 1.0
-  Future<String> setSpeed(AudioManagerRate rate) async {
+  /// `rate` Play rate, default [AudioRate.rate100] is 1.0
+  Future<String> setRate(AudioRate rate) async {
     if (_preprocessing().isNotEmpty) return _preprocessing();
+    const _rates = [0.5, 0.75, 1, 1.5, 1.75, 2];
     double _rate = _rates[rate.index];
-    return await _channel.invokeMethod("seekTo", {"rate": _rate});
+    return await _channel.invokeMethod("rate", {"rate": _rate});
   }
 
   /// stop play
@@ -289,7 +287,7 @@ class AudioManager {
     _initialize = false;
     _duration = Duration(milliseconds: 0);
     _position = Duration(milliseconds: 0);
-    _playing = false;
+    _setPlaying(false);
   }
 
   /// Update play details

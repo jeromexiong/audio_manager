@@ -1,3 +1,9 @@
+## 0.5.3
+
+- fix iOS stuck
+- add `toPlay` and `toPause` method
+- add interrupt pause
+
 ## 0.5.2+1
 
 - remove `AndroidManifast.xml` redundant configuration

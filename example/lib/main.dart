@@ -76,6 +76,7 @@ class _MyAppState extends State<MyApp> {
           break;
         case AudioManagerEvents.ready:
           print("ready to play");
+          _error = null;
           _sliderVolume = AudioManager.instance.volume;
           _position = AudioManager.instance.position;
           _duration = AudioManager.instance.duration;

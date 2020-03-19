@@ -56,8 +56,13 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
             AudioManager.default.title = arguments["title"] as? String
             AudioManager.default.desc = arguments["desc"] as? String
             if let cover = arguments["cover"] as? String, let isLocalCover = arguments["isLocalCover"] as? Bool {
-                if !isLocalCover, let _cover = URL(string: cover), let data = try? Data(contentsOf: _cover) {
-                    AudioManager.default.cover = UIImageView(image: UIImage(data: data))
+                if !isLocalCover, let _cover = URL(string: cover) {
+                    let request = URLRequest(url: _cover)
+                    NSURLConnection.sendAsynchronousRequest(request, queue: OperationQueue.main) { (_, data, _) in
+                        if let data = data {
+                            AudioManager.default.cover = UIImageView(image: UIImage(data: data))
+                        }
+                    }
                 }else if let path = self.getLocal(SwiftAudioManagerPlugin.instance.registrar, path: cover) {
                     AudioManager.default.cover = UIImageView(image: UIImage(contentsOfFile: path))
                 }
@@ -75,6 +80,12 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
             }else {
                 AudioManager.default.play(url)
             }
+            result(AudioManager.default.playing)
+        case "play":
+            AudioManager.default.play(url)
+            result(AudioManager.default.playing)
+        case "pause":
+            AudioManager.default.pause(url)
             result(AudioManager.default.playing)
         case "stop":
             AudioManager.default.clean()
