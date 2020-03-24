@@ -1,3 +1,7 @@
+## 0.5.3+1
+
+- fix repeated problem of notification service
+
 ## 0.5.3
 
 - fix iOS stuck
