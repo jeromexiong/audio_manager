@@ -181,6 +181,7 @@ open class AudioManager: NSObject {
             return
         }
         queue.play()
+        queue.rate = rate
         playing = true
         onEvents?(.playing)
     }

@@ -1,6 +1,7 @@
-## 0.5.3+1
+## 0.5.3+2
 
 - fix repeated problem of notification service
+- replace android notification chinese text to icon
 
 ## 0.5.3
 
