@@ -1,5 +1,6 @@
-## 0.5.3+2
+## 0.5.3+3
 
+- fix out of bounds
 - fix repeated problem of notification service
 - replace android notification chinese text to icon
 

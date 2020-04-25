@@ -329,8 +329,12 @@ class AudioManager {
       }
       _curIndex = _randoms[_curIndex];
     }
-    if (_curIndex >= _audioList.length)
+    if (_curIndex >= _audioList.length) {
       _curIndex = _audioList.length - 1;
+    }
+    if (_curIndex < 0) {
+      _curIndex = 0;
+    }
     return _audioList[_curIndex];
   }
 
