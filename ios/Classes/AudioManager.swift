@@ -147,12 +147,10 @@ open class AudioManager: NSObject {
             queue.actionAtItemEnd = .none
             queue.rate = rate
             url = link
-            if !isAuto {
-                pause(link)
-            }
             
             observingProps()
             observingTimeChanges()
+            setRemoteInfo()
             NotificationCenter.default.addObserver(self, selector: #selector(playerFinishPlaying(_:)), name: .AVPlayerItemDidPlayToEndTime, object: queue.currentItem)
         }else {
             play(link)
@@ -167,9 +165,9 @@ open class AudioManager: NSObject {
         }
         if queue.currentItem?.status != .readyToPlay { return }
         
-        playerItem.seek(to: CMTime(seconds: position, preferredTimescale: timescale)) { (flag) in
+        playerItem.seek(to: CMTime(seconds: position, preferredTimescale: timescale)) {[weak self] (flag) in
             if flag {
-                self.onEvents?(.seekComplete(Int(position * 1000)))
+                self?.onEvents?(.seekComplete(Int(position * 1000)))
             }
         }
     }
@@ -204,10 +202,10 @@ open class AudioManager: NSObject {
             queue.removeTimeObserver(observer)
             NotificationCenter.default.removeObserver(self)
         }
-        let playerItem: AVPlayerItem? = _playingMusic[link ?? url ?? ""] as? AVPlayerItem
-        if playerItem != nil {
+        let playerItem = _playingMusic[link ?? url ?? ""] as? AVPlayerItem
+        if let playerItem = playerItem {
             seek(to: 0, link: link ?? url ?? "")
-            queue.remove(playerItem!)
+            queue.remove(playerItem)
             _playingMusic.removeValue(forKey: link ?? url ?? "")
         }
         playing = false
@@ -328,9 +326,15 @@ fileprivate extension AudioManager {
     /// 监听属性变化
     func observingProps() {
         observeStatus = queue.currentItem?.observe(\.status) {
-            [unowned self] _playerItem, change in
+            [weak self] _playerItem, change in
+            guard let `self` = self else { return }
             if _playerItem.status == .readyToPlay {
-                self.playing = true && self.isAuto
+                self.playing = self.isAuto
+                if self.isAuto {
+                    self.onEvents?(.playing)
+                }else {
+                    self.queue.pause()
+                }
                 self.onEvents?(.ready(self.duration))
             }else {
                 self.playing = false
@@ -338,7 +342,8 @@ fileprivate extension AudioManager {
         }
         
         observeLoaded = queue.currentItem?.observe(\.loadedTimeRanges) {
-            [unowned self] _playerItem, change in
+            [weak self] _playerItem, change in
+            guard let `self` = self else { return }
             let ranges = _playerItem.loadedTimeRanges
             guard let timeRange = ranges.first as? CMTimeRange else { return }
             let start = timeRange.start.seconds
@@ -350,13 +355,13 @@ fileprivate extension AudioManager {
         }
         
         observeBufferEmpty = queue.currentItem?.observe(\.isPlaybackBufferEmpty) {
-            [unowned self] _playerItem, change in
-            self.buffering = true
+            [weak self] _playerItem, change in
+            self?.buffering = true
         }
         
         observeCanPlay = queue.currentItem?.observe(\.isPlaybackLikelyToKeepUp) {
-            [unowned self] _playerItem, change in
-            self.buffering = false
+            [weak self] _playerItem, change in
+            self?.buffering = false
         }
     }
     /// 监听时间变化
@@ -366,8 +371,8 @@ fileprivate extension AudioManager {
             queue.removeTimeObserver(observer)
         }
         let time = CMTimeMake(value: 1, timescale: 1)
-        timeObserver = queue.addPeriodicTimeObserver(forInterval: time, queue: DispatchQueue.main, using: { (currentPlayerTime) in
-            self.updateLockInfo()
+        timeObserver = queue.addPeriodicTimeObserver(forInterval: time, queue: DispatchQueue.main, using: {[weak self] (currentPlayerTime) in
+            self?.updateLockInfo()
         })
     }
     /// 锁屏信息
@@ -379,13 +384,17 @@ fileprivate extension AudioManager {
         let currentTime = Double(CMTimeGetSeconds(queue.currentTime()))
         if duration.isNaN || currentTime.isNaN { return }
         
+        setRemoteInfo()
+        onEvents?(.timeupdate(currentTime, duration))
+    }
+    func setRemoteInfo() {
         let center = MPNowPlayingInfoCenter.default()
         var infos = [String: Any]()
         
         infos[MPMediaItemPropertyTitle] = title
         infos[MPMediaItemPropertyArtist] = desc
-        infos[MPMediaItemPropertyPlaybackDuration] = duration
-        infos[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
+        infos[MPMediaItemPropertyPlaybackDuration] = Double(duration / 1000)
+        infos[MPNowPlayingInfoPropertyElapsedPlaybackTime] = Double(currentTime / 1000)
         infos[MPNowPlayingInfoPropertyPlaybackRate] = queue.rate
         queue.rate = rate
         
@@ -405,8 +414,6 @@ fileprivate extension AudioManager {
         }
         
         center.nowPlayingInfo = infos
-        
-        onEvents?(.timeupdate(currentTime, duration))
     }
     @objc func audioSessionInterrupted(_ n: Notification) {
         print("\n\n\n > > > > > Error Audio Session Interrupted \n\n\n")

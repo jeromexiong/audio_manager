@@ -266,7 +266,7 @@ class AudioManager {
 
   /// `position` Move location millisecond timestamp.
   ///
-  /// ⚠️ You must be [AudioManagerEvents.ready] before you can change the playback progress
+  /// ⚠️ You must after [AudioManagerEvents.ready] event invoked before you can change the playback progress
   Future<String> seekTo(Duration position) async {
     if (_preprocessing().isNotEmpty) return _preprocessing();
     if (position.inMilliseconds < 0 ||

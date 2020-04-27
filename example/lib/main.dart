@@ -81,7 +81,8 @@ class _MyAppState extends State<MyApp> {
           _position = AudioManager.instance.position;
           _duration = AudioManager.instance.duration;
           setState(() {});
-          AudioManager.instance.seekTo(Duration(seconds: 10));
+          // if you need to seek times, must after AudioManagerEvents.ready event invoked
+          // AudioManager.instance.seekTo(Duration(seconds: 10));
           break;
         case AudioManagerEvents.seekComplete:
           _position = AudioManager.instance.position;

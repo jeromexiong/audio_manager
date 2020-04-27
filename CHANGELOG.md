@@ -1,3 +1,8 @@
+## 0.5.4
+
+- fix ios autoplay
+- fix ios remote control of pre/next play event
+
 ## 0.5.3+3
 
 - fix out of bounds
