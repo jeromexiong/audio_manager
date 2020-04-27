@@ -269,6 +269,11 @@ fileprivate extension AudioManager {
         guard let urlPath = string.components(separatedBy: "?").first else {
             return nil
         }
+        
+        if urlPath.contains("file:") {
+            return URLComponents(url: URL(fileURLWithPath: urlPath), resolvingAgainstBaseURL: false)
+        }
+        
         var components = URLComponents(string: urlPath)
         if let queryString = string.components(separatedBy: "?").last {
             components?.queryItems = []
