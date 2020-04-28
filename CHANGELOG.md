@@ -1,3 +1,7 @@
+## 0.5.4+1
+
+- Fix loading local file crash
+
 ## 0.5.4
 
 - fix ios autoplay
