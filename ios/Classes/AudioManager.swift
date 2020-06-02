@@ -20,7 +20,6 @@ open class AudioManager: NSObject {
     
     private override init() {
         super.init()
-        setRemoteControl()
         NotificationCenter.default.addObserver(self, selector: #selector(volumeChange(n:)), name: NSNotification.Name(rawValue: "AVSystemController_SystemVolumeDidChangeNotification"), object: nil)
     }
     deinit {
@@ -86,44 +85,32 @@ open class AudioManager: NSObject {
     fileprivate var observeLoaded: NSKeyValueObservation?
     fileprivate var observeBufferEmpty: NSKeyValueObservation?
     fileprivate var observeCanPlay: NSKeyValueObservation?
+    
     fileprivate let session = AVAudioSession.sharedInstance()
-    
-    /// 注册后台播放
-    /// register in application didFinishLaunchingWithOptions method
-    open func registerBackground(){
-        do{
-            try session.setActive(true)
-            try session.setCategory(AVAudioSession.Category.playback)
-            try session.setCategory(.playback, options: .allowBluetooth)
-            if #available(iOS 10.0, *) {
-                try session.setCategory(.playback, options: .allowAirPlay)
-                try session.setCategory(.playback, options: .allowBluetoothA2DP)
-            }
-            try session.overrideOutputAudioPort(AVAudioSession.PortOverride.speaker)
-            
-        }catch{
-            onEvents?(.error(error as NSError))
-        }
-        
-        NotificationCenter.default.addObserver(self, selector: #selector(handleRouteChange(_:)), name: AVAudioSession.routeChangeNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(audioSessionInterrupted(_:)), name: AVAudioSession.interruptionNotification, object: nil)
-    }
-    
     fileprivate var interrupterStatus = false
-    /// 中断结束后继续播放
-    /// register in application applicationDidBecomeActive
-    open func interrupterAction(_ isplay: Bool = false) {
-        if playing {
-            pause()
-            interrupterStatus = true
-            return
-        }
-        if interrupterStatus && isplay {
-            play()
-            interrupterStatus = false
+    
+    fileprivate lazy var volumeView: MPVolumeView = {
+        let volumeView = MPVolumeView()
+        volumeView.frame = CGRect(x: -100, y: -100, width: 40, height: 40)
+        return volumeView
+    }()
+    
+    /// 是否显示音量视图
+    open var showVolumeView: Bool = false {
+        didSet {
+            if showVolumeView {
+                volumeView.removeFromSuperview()
+            }else {
+                UIApplication.shared.windows.first?.addSubview(volumeView)
+            }
         }
     }
-    
+    /// 当前音量
+    open var currentVolume: Float {
+        return session.outputVolume
+    }
+}
+extension AudioManager {
     /// 必须要调用 start method 才能进行其他操作
     open func start(_ link: String, isLocal: Bool = false) {
         var playerItem: AVPlayerItem? = _playingMusic[link] as? AVPlayerItem
@@ -151,6 +138,7 @@ open class AudioManager: NSObject {
             observingProps()
             observingTimeChanges()
             setRemoteInfo()
+            setRemoteControl()
             NotificationCenter.default.addObserver(self, selector: #selector(playerFinishPlaying(_:)), name: .AVPlayerItemDidPlayToEndTime, object: queue.currentItem)
         }else {
             play(link)
@@ -172,27 +160,55 @@ open class AudioManager: NSObject {
         }
     }
     
+    /// 设置音量大小 0~1
+    open func setVolume(_ value: Float, show volume: Bool = true) {
+        var value = min(value, 1)
+        value = max(value, 0)
+        let volumeView = MPVolumeView()
+        var slider = UISlider()
+        for view in volumeView.subviews {
+            if NSStringFromClass(view.classForCoder) == "MPVolumeSlider" {
+                slider = view as! UISlider
+                break
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now()+0.01) {
+            slider.value = value
+        }
+        if volume {
+            if !showVolumeView {
+                showVolumeView = true
+            }
+        }else {
+            showVolumeView = false
+        }
+    }
+    
     /// 播放▶️音乐🎵
-    open func play(_ link: String? = nil){
+    @discardableResult
+    open func play(_ link: String? = nil) -> Bool {
         guard let _ = _playingMusic[link ?? url ?? ""] as? AVPlayerItem else {
             onEvents?(.error(NSError(domain: domain, code: 0, userInfo: ["msg": "you have to invoke start method first"])))
-            return
+            return false
         }
         queue.play()
         queue.rate = rate
         playing = true
         onEvents?(.playing)
+        return true
     }
     
     /// 暂停⏸音乐🎵
-    open func pause(_ link: String? = nil) {
+    @discardableResult
+    open func pause(_ link: String? = nil) -> Bool {
         guard let _ = _playingMusic[link ?? url ?? ""] as? AVPlayerItem else {
             onEvents?(.error(NSError(domain: domain, code: 0, userInfo: ["msg": "you have to invoke start method first"])))
-            return
+            return false
         }
         queue.pause()
         playing = false
         onEvents?(.pause)
+        return true
     }
     
     /// 停止⏹音乐🎵
@@ -217,48 +233,7 @@ open class AudioManager: NSObject {
         stop()
         queue.removeAllItems()
         _playingMusic.removeAll()
-    }
-    
-    fileprivate lazy var volumeView: MPVolumeView = {
-        let volumeView = MPVolumeView()
-        volumeView.frame = CGRect(x: -100, y: -100, width: 40, height: 40)
-        return volumeView
-    }()
-    /// 是否显示音量视图
-    open var showVolumeView: Bool = false {
-        didSet {
-            if showVolumeView {
-                volumeView.removeFromSuperview()
-            }else {
-                UIApplication.shared.windows.first?.addSubview(volumeView)
-            }
-        }
-    }
-    /// 设置音量大小 0~1
-    open func setVolume(_ value: Float, show volume: Bool = true) {
-        var value = min(value, 1)
-        value = max(value, 0)
-        let volumeView = MPVolumeView()
-        var slider = UISlider()
-        for view in volumeView.subviews {
-            if NSStringFromClass(view.classForCoder) == "MPVolumeSlider" {
-                slider = view as! UISlider
-                break
-            }
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now()+0.01) {
-            slider.value = value
-        }
-        if volume {
-            if !showVolumeView {
-                showVolumeView = true
-            }
-        }else {
-            showVolumeView = false
-        }
-    }
-    open var currentVolume: Float {
-        return session.outputVolume
+        UIApplication.shared.endReceivingRemoteControlEvents()
     }
 }
 fileprivate extension AudioManager {
@@ -287,41 +262,6 @@ fileprivate extension AudioManager {
             }
         }
         return components!
-    }
-    /// 锁屏操作
-    func setRemoteControl() {
-        let remote = MPRemoteCommandCenter.shared()
-        remote.playCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
-            self.play()
-            return .success
-        }
-        remote.pauseCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
-            self.pause()
-            return .success
-        }
-        remote.togglePlayPauseCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
-            if self.playing {
-                self.pause()
-            }else {
-                self.play()
-            }
-            return .success
-        }
-        if #available(iOS 9.1, *) {
-            remote.changePlaybackPositionCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
-                let playback = event as! MPChangePlaybackPositionCommandEvent
-                self.seek(to: playback.positionTime)
-                return .success
-            }
-        }
-        remote.previousTrackCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
-            self.onEvents?(.previous)
-            return .success
-        }
-        remote.nextTrackCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
-            self.onEvents?(.next)
-            return .success
-        }
     }
     @objc func playerFinishPlaying(_ n: Notification) {
         queue.seek(to: CMTime.zero)
@@ -380,6 +320,95 @@ fileprivate extension AudioManager {
             self?.updateLockInfo()
         })
     }
+}
+// MARK: system
+extension AudioManager {
+    /// 注册后台播放
+    /// register in application didFinishLaunchingWithOptions method
+    open func registerBackground(){
+        do{
+            try session.setActive(true)
+            try session.setCategory(AVAudioSession.Category.playback)
+            try session.setCategory(.playback, options: .allowBluetooth)
+            if #available(iOS 10.0, *) {
+                try session.setCategory(.playback, options: .allowAirPlay)
+                try session.setCategory(.playback, options: .allowBluetoothA2DP)
+            }
+            try session.overrideOutputAudioPort(AVAudioSession.PortOverride.speaker)
+            
+        }catch{
+            onEvents?(.error(error as NSError))
+        }
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(handleRouteChange(_:)), name: AVAudioSession.routeChangeNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(audioSessionInterrupted(_:)), name: AVAudioSession.interruptionNotification, object: nil)
+    }
+    
+    /// 中断结束后继续播放
+    /// register in application applicationDidBecomeActive
+    open func interrupterAction(_ isplay: Bool = false) {
+        if playing {
+            pause()
+            interrupterStatus = true
+            return
+        }
+        if interrupterStatus && isplay {
+            play()
+            interrupterStatus = false
+        }
+    }
+}
+fileprivate extension AudioManager {
+    /// 锁屏操作
+    func setRemoteControl() {
+        UIApplication.shared.beginReceivingRemoteControlEvents()
+        
+        let remote = MPRemoteCommandCenter.shared()
+        remote.playCommand.removeTarget(self)
+        remote.pauseCommand.removeTarget(self)
+        remote.togglePlayPauseCommand.removeTarget(self)
+        if #available(iOS 9.1, *) {
+            remote.changePlaybackPositionCommand.removeTarget(self)
+        }
+        remote.previousTrackCommand.removeTarget(self)
+        remote.nextTrackCommand.removeTarget(self)
+        
+        remote.playCommand.addTarget {[weak self] (event) -> MPRemoteCommandHandlerStatus in
+            guard let self = self else { return .success }
+            return self.play() ? .success : .commandFailed
+        }
+        remote.pauseCommand.addTarget {[weak self] (event) -> MPRemoteCommandHandlerStatus in
+            guard let self = self else { return .success }
+            return self.pause() ? .success : .commandFailed
+        }
+        remote.togglePlayPauseCommand.addTarget {[weak self] (event) -> MPRemoteCommandHandlerStatus in
+            guard let self = self else { return .success }
+            if self.playing {
+                return self.play() ? .success : .commandFailed
+            }else {
+                return self.pause() ? .success : .commandFailed
+            }
+        }
+        if #available(iOS 9.1, *) {
+            remote.changePlaybackPositionCommand.addTarget {[weak self] (event) -> MPRemoteCommandHandlerStatus in
+                guard let self = self else { return .success }
+                let playback = event as! MPChangePlaybackPositionCommandEvent
+                self.seek(to: playback.positionTime)
+                return .success
+            }
+        }
+        remote.previousTrackCommand.addTarget {[weak self] (event) -> MPRemoteCommandHandlerStatus in
+            guard let self = self else { return .success }
+            self.onEvents?(.previous)
+            return .success
+        }
+        remote.nextTrackCommand.addTarget {[weak self] (event) -> MPRemoteCommandHandlerStatus in
+            guard let self = self else { return .success }
+            self.onEvents?(.next)
+            return .success
+        }
+    }
+    
     /// 锁屏信息
     func updateLockInfo() {
         guard let _ = url, playing == true else {
@@ -420,6 +449,9 @@ fileprivate extension AudioManager {
         
         center.nowPlayingInfo = infos
     }
+}
+
+fileprivate extension AudioManager {
     @objc func audioSessionInterrupted(_ n: Notification) {
         print("\n\n\n > > > > > Error Audio Session Interrupted \n\n\n")
         guard let userInfo = n.userInfo,

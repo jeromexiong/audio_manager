@@ -1,3 +1,7 @@
+## 0.5.5
+
+- Fix iOS remove lock screen control from notification center
+
 ## 0.5.4+1
 
 - Fix loading local file crash

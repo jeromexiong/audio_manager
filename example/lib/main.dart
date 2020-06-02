@@ -68,7 +68,7 @@ class _MyAppState extends State<MyApp> {
       print("$events, $args");
       switch (events) {
         case AudioManagerEvents.start:
-          print("start load data callback");
+          print("start load data callback, curIndex is ${AudioManager.instance.curIndex}");
           _position = AudioManager.instance.position;
           _duration = AudioManager.instance.duration;
           _slider = 0;
@@ -233,12 +233,10 @@ class _MyAppState extends State<MyApp> {
                 onPressed: () => AudioManager.instance.next()),
             IconButton(
                 icon: Icon(
-                  Icons.menu,
+                  Icons.stop,
                   color: Colors.black,
                 ),
-                onPressed: () {
-                  print("click menu");
-                }),
+                onPressed: () => AudioManager.instance.stop()),
           ],
         ),
       ),
