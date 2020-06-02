@@ -48,8 +48,8 @@ AudioManager.instance
 		// "local resource (file://${file.path})"
 		"title",
 		desc: "desc",
-		cover: "assets/ic_launcher.png",
-		// cover: "network cover image resource")
+		// cover: "network cover image resource"
+		cover: "assets/ic_launcher.png")
 	.then((err) {
 	print(err);
 });
