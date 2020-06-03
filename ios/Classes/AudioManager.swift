@@ -20,6 +20,7 @@ open class AudioManager: NSObject {
     
     private override init() {
         super.init()
+        setRemoteControl()
         NotificationCenter.default.addObserver(self, selector: #selector(volumeChange(n:)), name: NSNotification.Name(rawValue: "AVSystemController_SystemVolumeDidChangeNotification"), object: nil)
     }
     deinit {
@@ -138,7 +139,8 @@ extension AudioManager {
             observingProps()
             observingTimeChanges()
             setRemoteInfo()
-            setRemoteControl()
+
+            UIApplication.shared.beginReceivingRemoteControlEvents()
             NotificationCenter.default.addObserver(self, selector: #selector(playerFinishPlaying(_:)), name: .AVPlayerItemDidPlayToEndTime, object: queue.currentItem)
         }else {
             play(link)
@@ -185,30 +187,26 @@ extension AudioManager {
     }
     
     /// 播放▶️音乐🎵
-    @discardableResult
-    open func play(_ link: String? = nil) -> Bool {
+    open func play(_ link: String? = nil) {
         guard let _ = _playingMusic[link ?? url ?? ""] as? AVPlayerItem else {
             onEvents?(.error(NSError(domain: domain, code: 0, userInfo: ["msg": "you have to invoke start method first"])))
-            return false
+            return
         }
         queue.play()
         queue.rate = rate
         playing = true
         onEvents?(.playing)
-        return true
     }
     
     /// 暂停⏸音乐🎵
-    @discardableResult
-    open func pause(_ link: String? = nil) -> Bool {
+    open func pause(_ link: String? = nil) {
         guard let _ = _playingMusic[link ?? url ?? ""] as? AVPlayerItem else {
             onEvents?(.error(NSError(domain: domain, code: 0, userInfo: ["msg": "you have to invoke start method first"])))
-            return false
+            return
         }
         queue.pause()
         playing = false
         onEvents?(.pause)
-        return true
     }
     
     /// 停止⏹音乐🎵
@@ -361,8 +359,6 @@ extension AudioManager {
 fileprivate extension AudioManager {
     /// 锁屏操作
     func setRemoteControl() {
-        UIApplication.shared.beginReceivingRemoteControlEvents()
-        
         let remote = MPRemoteCommandCenter.shared()
         remote.playCommand.removeTarget(self)
         remote.pauseCommand.removeTarget(self)
@@ -373,37 +369,34 @@ fileprivate extension AudioManager {
         remote.previousTrackCommand.removeTarget(self)
         remote.nextTrackCommand.removeTarget(self)
         
-        remote.playCommand.addTarget {[weak self] (event) -> MPRemoteCommandHandlerStatus in
-            guard let self = self else { return .success }
-            return self.play() ? .success : .commandFailed
+        remote.playCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
+            self.play()
+            return .success
         }
-        remote.pauseCommand.addTarget {[weak self] (event) -> MPRemoteCommandHandlerStatus in
-            guard let self = self else { return .success }
-            return self.pause() ? .success : .commandFailed
+        remote.pauseCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
+            self.pause()
+            return .success
         }
-        remote.togglePlayPauseCommand.addTarget {[weak self] (event) -> MPRemoteCommandHandlerStatus in
-            guard let self = self else { return .success }
+        remote.togglePlayPauseCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
             if self.playing {
-                return self.play() ? .success : .commandFailed
+                self.pause()
             }else {
-                return self.pause() ? .success : .commandFailed
+                self.play()
             }
+            return .success
         }
         if #available(iOS 9.1, *) {
-            remote.changePlaybackPositionCommand.addTarget {[weak self] (event) -> MPRemoteCommandHandlerStatus in
-                guard let self = self else { return .success }
+            remote.changePlaybackPositionCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
                 let playback = event as! MPChangePlaybackPositionCommandEvent
                 self.seek(to: playback.positionTime)
                 return .success
             }
         }
-        remote.previousTrackCommand.addTarget {[weak self] (event) -> MPRemoteCommandHandlerStatus in
-            guard let self = self else { return .success }
+        remote.previousTrackCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
             self.onEvents?(.previous)
             return .success
         }
-        remote.nextTrackCommand.addTarget {[weak self] (event) -> MPRemoteCommandHandlerStatus in
-            guard let self = self else { return .success }
+        remote.nextTrackCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
             self.onEvents?(.next)
             return .success
         }
