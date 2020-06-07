@@ -1,4 +1,4 @@
-## 0.5.5+1
+## 0.5.5+2
 
 - `setRate` method to fix num conversion double
 - Fix iOS remote Control previous/next error
