@@ -281,7 +281,7 @@ class AudioManager {
     if (_preprocessing().isNotEmpty) return _preprocessing();
     const _rates = [0.5, 0.75, 1, 1.5, 1.75, 2];
     rate = rate ?? AudioRate.rate100;
-    double _rate = _rates[rate.index];
+    double _rate = _rates[rate.index].toDouble();
     return await _channel.invokeMethod("rate", {"rate": _rate});
   }
 

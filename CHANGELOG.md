@@ -1,5 +1,6 @@
-## 0.5.5
+## 0.5.5+1
 
+- `setRate` method to fix num conversion double
 - Fix iOS remove lock screen control from notification center
 
 ## 0.5.4+1
