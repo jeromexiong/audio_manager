@@ -1,5 +1,6 @@
-## 0.5.5+2
+## 0.5.5+3
 
+- Play audio immediately
 - `setRate` method to fix num conversion double
 - Fix iOS remote Control previous/next error
 - Fix iOS remove lock screen control from notification center

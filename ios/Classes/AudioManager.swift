@@ -134,6 +134,9 @@ extension AudioManager {
             queue.replaceCurrentItem(with: playerItem)
             queue.actionAtItemEnd = .none
             queue.rate = rate
+            if #available(iOS 10.0, *) {
+                queue.automaticallyWaitsToMinimizeStalling = false
+            }
             url = link
             
             observingProps()
@@ -192,8 +195,12 @@ extension AudioManager {
             onEvents?(.error(NSError(domain: domain, code: 0, userInfo: ["msg": "you have to invoke start method first"])))
             return
         }
-        queue.play()
-        queue.rate = rate
+        if #available(iOS 10.0, *) {
+            queue.playImmediately(atRate: rate)
+        } else {
+            queue.play()
+            queue.rate = rate
+        }
         playing = true
         onEvents?(.playing)
     }
