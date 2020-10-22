@@ -28,14 +28,16 @@ class _MyAppState extends State<MyApp> {
     {
       "title": "Assets",
       "desc": "local assets playback",
-      "url": "assets/audio.mp3",
+      "url": "assets/xv.mp3",
       "coverUrl": "assets/ic_launcher.png"
     },
     {
       "title": "network",
       "desc": "network resouce playback",
-      "url": "https://dl.espressif.com/dl/audio/ff-16b-2c-44100hz.m4a",
-      "coverUrl": "https://homepages.cae.wisc.edu/~ece533/images/airplane.png"
+      "url":
+          "https://raw.githubusercontent.com/jeromexiong/audio_manager/master/example/assets/braveheart.m4a",
+      "coverUrl":
+          "https://raw.githubusercontent.com/jeromexiong/audio_manager/master/example/assets/braveheart.jpg"
     }
   ];
 
@@ -45,7 +47,7 @@ class _MyAppState extends State<MyApp> {
 
     initPlatformState();
     setupAudio();
-    // loadFile();
+    loadFile();
   }
 
   @override
@@ -68,7 +70,8 @@ class _MyAppState extends State<MyApp> {
       print("$events, $args");
       switch (events) {
         case AudioManagerEvents.start:
-          print("start load data callback, curIndex is ${AudioManager.instance.curIndex}");
+          print(
+              "start load data callback, curIndex is ${AudioManager.instance.curIndex}");
           _position = AudioManager.instance.position;
           _duration = AudioManager.instance.duration;
           _slider = 0;
@@ -121,13 +124,18 @@ class _MyAppState extends State<MyApp> {
   }
 
   void loadFile() async {
+    // read bundle file to local path
+    final audioFile = await rootBundle.load("assets/aLIEz.m4a");
+    final audio = audioFile.buffer.asUint8List();
+
     final appDocDir = await getApplicationDocumentsDirectory();
+    print(appDocDir);
     // Please make sure the `test.mp3` exists in the document directory
-    final file = File("${appDocDir.path}/test.mp3");
+    final file = File("${appDocDir.path}/aLIEz.m4a");
+    file.writeAsBytesSync(audio);
+
     AudioInfo info = AudioInfo("file://${file.path}",
-        title: "file",
-        desc: "local file",
-        coverUrl: "https://homepages.cae.wisc.edu/~ece533/images/baboon.png");
+        title: "file", desc: "local file", coverUrl: "assets/aLIEz.jpg");
 
     list.add(info.toJson());
     AudioManager.instance.audioList.add(info);
