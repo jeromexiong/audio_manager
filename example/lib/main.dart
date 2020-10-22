@@ -27,17 +27,15 @@ class _MyAppState extends State<MyApp> {
   final list = [
     {
       "title": "Assets",
-      "desc": "local assets playback",
+      "desc": "assets playback",
       "url": "assets/xv.mp3",
       "coverUrl": "assets/ic_launcher.png"
     },
     {
       "title": "network",
       "desc": "network resouce playback",
-      "url":
-          "https://raw.githubusercontent.com/jeromexiong/audio_manager/master/example/assets/braveheart.m4a",
-      "coverUrl":
-          "https://raw.githubusercontent.com/jeromexiong/audio_manager/master/example/assets/braveheart.jpg"
+      "url": "https://dl.espressif.com/dl/audio/ff-16b-2c-44100hz.m4a",
+      "coverUrl": "https://homepages.cae.wisc.edu/~ece533/images/airplane.png"
     }
   ];
 
