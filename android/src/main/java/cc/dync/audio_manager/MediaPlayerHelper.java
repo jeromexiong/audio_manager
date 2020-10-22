@@ -170,7 +170,7 @@ public class MediaPlayerHelper {
                     onStatusCallbackNext(CallBackState.previous);
                     break;
                 case stop:
-                    stop();
+                    release();
                     break;
             }
         });
@@ -401,32 +401,27 @@ public class MediaPlayerHelper {
     /**
      * 停止资源
      */
-//    public void stop() {
-//        if (uiHolder.player != null) {
-//            uiHolder.player.stop();
-//        }
-//        MediaPlayerService.unBind(context);
-//        refress_time_handler.removeCallbacks(refress_time_Thread);
-//        onStatusCallbackNext(CallBackState.stop);
-//    }
-
-    /**
-     * 释放资源
-     */
     public void stop() {
         if (uiHolder.player != null) {
             uiHolder.player.release();
             uiHolder.player = null;
         }
         onStatusCallbackNext(CallBackState.stop);
-        MediaPlayerService.unBind(context);
         refress_time_handler.removeCallbacks(refress_time_Thread);
-
-        if (wifiLock != null && wifiLock.isHeld())
-            wifiLock.release();
 
         curUrl = "";
         isPrepare = false;
+    }
+
+    /**
+     * 释放资源
+     */
+    public void release() {
+        stop();
+        MediaPlayerService.unBind(context);
+
+        if (wifiLock != null && wifiLock.isHeld())
+            wifiLock.release();
     }
 
 //    /**

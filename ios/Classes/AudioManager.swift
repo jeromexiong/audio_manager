@@ -102,7 +102,7 @@ open class AudioManager: NSObject {
             if showVolumeView {
                 volumeView.removeFromSuperview()
             }else {
-                UIApplication.shared.windows.first?.addSubview(volumeView)
+                UIApplication.shared.keyWindow?.addSubview(volumeView)
             }
         }
     }
@@ -111,9 +111,9 @@ open class AudioManager: NSObject {
         return session.outputVolume
     }
 }
-extension AudioManager {
+public extension AudioManager {
     /// 必须要调用 start method 才能进行其他操作
-    open func start(_ link: String, isLocal: Bool = false) {
+    func start(_ link: String, isLocal: Bool = false) {
         var playerItem: AVPlayerItem? = _playingMusic[link] as? AVPlayerItem
         if playerItem == nil {
             stop(url)
@@ -142,7 +142,7 @@ extension AudioManager {
             observingProps()
             observingTimeChanges()
             setRemoteInfo()
-
+            
             UIApplication.shared.beginReceivingRemoteControlEvents()
             NotificationCenter.default.addObserver(self, selector: #selector(playerFinishPlaying(_:)), name: .AVPlayerItemDidPlayToEndTime, object: queue.currentItem)
         }else {
@@ -150,11 +150,11 @@ extension AudioManager {
         }
     }
     
-    open func seek(to position: Double, link: String? = nil) {
+    func seek(to position: Double, link: String? = nil) {
         guard let _url = link ?? url, let playerItem = _playingMusic[_url] as? AVPlayerItem,
-            let timescale = queue.currentItem?.asset.duration.timescale else {
-                onEvents?(.error(NSError(domain: domain, code: 0, userInfo: ["msg": "you have to invoke start method first"])))
-                return
+              let timescale = queue.currentItem?.asset.duration.timescale else {
+            onEvents?(.error(NSError(domain: domain, code: 0, userInfo: ["msg": "you have to invoke start method first"])))
+            return
         }
         if queue.currentItem?.status != .readyToPlay { return }
         
@@ -166,7 +166,7 @@ extension AudioManager {
     }
     
     /// 设置音量大小 0~1
-    open func setVolume(_ value: Float, show volume: Bool = true) {
+    func setVolume(_ value: Float, show volume: Bool = true) {
         var value = min(value, 1)
         value = max(value, 0)
         let volumeView = MPVolumeView()
@@ -190,7 +190,7 @@ extension AudioManager {
     }
     
     /// 播放▶️音乐🎵
-    open func play(_ link: String? = nil) {
+    func play(_ link: String? = nil) {
         guard let _ = _playingMusic[link ?? url ?? ""] as? AVPlayerItem else {
             onEvents?(.error(NSError(domain: domain, code: 0, userInfo: ["msg": "you have to invoke start method first"])))
             return
@@ -206,7 +206,7 @@ extension AudioManager {
     }
     
     /// 暂停⏸音乐🎵
-    open func pause(_ link: String? = nil) {
+    func pause(_ link: String? = nil) {
         guard let _ = _playingMusic[link ?? url ?? ""] as? AVPlayerItem else {
             onEvents?(.error(NSError(domain: domain, code: 0, userInfo: ["msg": "you have to invoke start method first"])))
             return
@@ -217,7 +217,7 @@ extension AudioManager {
     }
     
     /// 停止⏹音乐🎵
-    open func stop(_ link: String? = nil) {
+    func stop(_ link: String? = nil) {
         if let observer = timeObserver {
             timeObserver = nil
             queue.removeTimeObserver(observer)
@@ -234,7 +234,7 @@ extension AudioManager {
     }
     
     /// 清除所有播放信息
-    open func clean() {
+    func clean() {
         stop()
         queue.removeAllItems()
         _playingMusic.removeAll()
@@ -260,8 +260,8 @@ fileprivate extension AudioManager {
             let queryItems = queryString.components(separatedBy: "&")
             for queryItem in queryItems {
                 guard let itemName = queryItem.components(separatedBy: "=").first,
-                    let itemValue = queryItem.components(separatedBy: "=").last else {
-                        continue
+                      let itemValue = queryItem.components(separatedBy: "=").last else {
+                    continue
                 }
                 components?.queryItems?.append(URLQueryItem(name: itemName, value: itemValue))
             }
@@ -327,19 +327,17 @@ fileprivate extension AudioManager {
     }
 }
 // MARK: system
-extension AudioManager {
+public extension AudioManager {
     /// 注册后台播放
     /// register in application didFinishLaunchingWithOptions method
-    open func registerBackground(){
+    func registerBackground(){
         do{
             try session.setActive(true)
-            try session.setCategory(AVAudioSession.Category.playback)
-            try session.setCategory(.playback, options: .allowBluetooth)
+            try session.setCategory(.playback, options: [.allowBluetooth, .mixWithOthers])
             if #available(iOS 10.0, *) {
-                try session.setCategory(.playback, options: .allowAirPlay)
-                try session.setCategory(.playback, options: .allowBluetoothA2DP)
+                try session.setCategory(.playback, options: [.allowAirPlay, .allowBluetoothA2DP, .mixWithOthers])
             }
-            try session.overrideOutputAudioPort(AVAudioSession.PortOverride.speaker)
+            try session.overrideOutputAudioPort(.speaker)
             
         }catch{
             onEvents?(.error(error as NSError))
@@ -351,7 +349,7 @@ extension AudioManager {
     
     /// 中断结束后继续播放
     /// register in application applicationDidBecomeActive
-    open func interrupterAction(_ isplay: Bool = false) {
+    func interrupterAction(_ isplay: Bool = false) {
         if playing {
             pause()
             interrupterStatus = true
@@ -455,9 +453,9 @@ fileprivate extension AudioManager {
     @objc func audioSessionInterrupted(_ n: Notification) {
         print("\n\n\n > > > > > Error Audio Session Interrupted \n\n\n")
         guard let userInfo = n.userInfo,
-            let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
-            let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
-                return
+              let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+            return
         }
         if type == .began {
             print("Interruption began, take appropriate actions")
@@ -477,9 +475,9 @@ fileprivate extension AudioManager {
     @objc func handleRouteChange(_ n: Notification) {
         print("\n\n\n > > > > > Audio Route Changed ","\n\n\n")
         guard let userInfo = n.userInfo,
-            let reasonValue = userInfo[AVAudioSessionRouteChangeReasonKey] as? UInt,
-            let reason = AVAudioSession.RouteChangeReason(rawValue:reasonValue) else {
-                return
+              let reasonValue = userInfo[AVAudioSessionRouteChangeReasonKey] as? UInt,
+              let reason = AVAudioSession.RouteChangeReason(rawValue:reasonValue) else {
+            return
         }
         
         let ports : [AVAudioSession.Port] = [.airPlay,.builtInMic,.bluetoothA2DP,.bluetoothHFP,.builtInReceiver,.bluetoothLE,.builtInReceiver,.headphones,.headsetMic]
@@ -503,9 +501,9 @@ fileprivate extension AudioManager {
     }
     @objc func volumeChange(n: Notification){
         guard let userInfo = n.userInfo, let parameter = userInfo["AVSystemController_AudioCategoryNotificationParameter"] as? String,
-            let reason = userInfo["AVSystemController_AudioVolumeChangeReasonNotificationParameter"] as? String,
-            let _volume = userInfo["AVSystemController_AudioVolumeNotificationParameter"] as? NSNumber else {
-                return
+              let reason = userInfo["AVSystemController_AudioVolumeChangeReasonNotificationParameter"] as? String,
+              let _volume = userInfo["AVSystemController_AudioVolumeNotificationParameter"] as? NSNumber else {
+            return
         }
         if (parameter == "Audio/Video") {
             if (reason == "ExplicitVolumeChange") {

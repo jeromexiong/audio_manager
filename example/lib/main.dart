@@ -51,7 +51,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void dispose() {
     // 释放所有资源
-    AudioManager.instance.stop();
+    AudioManager.instance.release();
     super.dispose();
   }
 
@@ -128,7 +128,7 @@ class _MyAppState extends State<MyApp> {
 
     final appDocDir = await getApplicationDocumentsDirectory();
     print(appDocDir);
-    // Please make sure the `test.mp3` exists in the document directory
+
     final file = File("${appDocDir.path}/aLIEz.m4a");
     file.writeAsBytesSync(audio);
 
@@ -137,6 +137,7 @@ class _MyAppState extends State<MyApp> {
 
     list.add(info.toJson());
     AudioManager.instance.audioList.add(info);
+    setState(() {});
   }
 
   Future<void> initPlatformState() async {

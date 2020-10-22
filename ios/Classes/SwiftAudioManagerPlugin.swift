@@ -33,6 +33,8 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
                 channel.invokeMethod("previous", arguments: nil)
             case .ended:
                 channel.invokeMethod("ended", arguments: nil)
+            case .stop:
+                channel.invokeMethod("stop", arguments: nil)
             case .volumeChange(let value):
                 channel.invokeMethod("volumeChange", arguments: value)
             default:
@@ -58,9 +60,12 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
             if let cover = arguments["cover"] as? String, let isLocalCover = arguments["isLocalCover"] as? Bool {
                 if !isLocalCover, let _cover = URL(string: cover) {
                     let request = URLRequest(url: _cover)
-                    NSURLConnection.sendAsynchronousRequest(request, queue: OperationQueue.main) { (_, data, _) in
+                    NSURLConnection.sendAsynchronousRequest(request, queue: OperationQueue.main) { (_, data, error) in
                         if let data = data {
                             AudioManager.default.cover = UIImageView(image: UIImage(data: data))
+                        }
+                        if let error = error as NSError? {
+                            result(error.description)
                         }
                     }
                 }else if let path = self.getLocal(SwiftAudioManagerPlugin.instance.registrar, path: cover) {
@@ -88,6 +93,8 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
             AudioManager.default.pause(url)
             result(AudioManager.default.playing)
         case "stop":
+            AudioManager.default.stop()
+        case "release":
             AudioManager.default.clean()
         case "updateLrc":
             AudioManager.default.desc = arguments["lrc"] as? String
@@ -125,5 +132,20 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
     public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable : Any] = [:]) -> Bool {
         AudioManager.default.registerBackground()
         return true
+    }
+    
+//    public func applicationWillResignActive(_ application: UIApplication) {
+//        backTaskId = backgroundPlayerID(backTaskId)
+//    }
+    
+    private var backTaskId: UIBackgroundTaskIdentifier = .invalid
+    /// 设置后台任务ID
+    private func backgroundPlayerID(_ backTaskId: UIBackgroundTaskIdentifier) -> UIBackgroundTaskIdentifier {
+        var taskId = UIBackgroundTaskIdentifier.invalid;
+        taskId = UIApplication.shared.beginBackgroundTask(expirationHandler: nil)
+        if taskId != .invalid && backTaskId != .invalid {
+            UIApplication.shared.endBackgroundTask(backTaskId)
+        }
+        return taskId
     }
 }

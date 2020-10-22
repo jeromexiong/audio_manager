@@ -21,6 +21,6 @@ class AudioInfo {
 
   @override
   String toString() {
-    return 'AudioInfo{url: $url, title: $title, desc: $desc}';
+    return 'AudioInfo{url: $url, title: $title, desc: $desc, coverUrl: $coverUrl}';
   }
 }

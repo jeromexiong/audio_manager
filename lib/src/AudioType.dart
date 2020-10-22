@@ -20,6 +20,9 @@ enum AudioManagerEvents {
   previous,
   ended,
 
+  /// Android notification bar click Close
+  stop,
+
   /// ⚠️ IOS simulator is invalid, please use real machine
   volumeChange,
   unknow

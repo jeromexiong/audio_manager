@@ -9,8 +9,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
-import io.flutter.embedding.engine.plugins.activity.ActivityAware;
-import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
@@ -135,6 +133,9 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
                 case ended:
                     channel.invokeMethod("ended", null);
                     break;
+                case stop:
+                    channel.invokeMethod("stop", null);
+                    break;
             }
         });
     }
@@ -197,6 +198,8 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
                 break;
             case "stop":
                 helper.stop();
+            case "release":
+                helper.release();
                 break;
             case "updateLrc":
                 helper.updateLrc(call.argument("lrc"));

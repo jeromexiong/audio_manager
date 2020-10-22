@@ -138,6 +138,10 @@ class AudioManager {
       case "ended":
         if (_events != null) _events(AudioManagerEvents.ended, null);
         break;
+      case "stop":
+        if (_events != null) _events(AudioManagerEvents.stop, null);
+        _reset();
+        break;
       case "volumeChange":
         _volume = call.arguments;
         if (_events != null) _events(AudioManagerEvents.volumeChange, _volume);
@@ -289,9 +293,19 @@ class AudioManager {
   stop() {
     _channel.invokeMethod("stop");
     _initialize = false;
+    _reset();
+  }
+
+  _reset() {
     _duration = Duration(milliseconds: 0);
     _position = Duration(milliseconds: 0);
     _setPlaying(false);
+  }
+
+  /// release all resource
+  release() {
+    _reset();
+    _channel.invokeListMethod("release");
   }
 
   /// Update play details
