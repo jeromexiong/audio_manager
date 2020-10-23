@@ -35,9 +35,7 @@ class AudioManager {
   void _setPlaying(bool playing) {
     if (_playing == playing) return;
     _playing = playing;
-    if (_events != null) {
-      _events(AudioManagerEvents.playstatus, _playing);
-    }
+    _onEvents(AudioManagerEvents.playstatus, _playing);
   }
 
   /// Current playing time (ms
@@ -93,16 +91,15 @@ class AudioManager {
       case "ready":
         _isLoading = false;
         _duration = Duration(milliseconds: call.arguments ?? 0);
-        if (_events != null) _events(AudioManagerEvents.ready, _duration);
+        _onEvents(AudioManagerEvents.ready, _duration);
         break;
       case "seekComplete":
         _position = Duration(milliseconds: call.arguments ?? 0);
-        if (_events != null && _duration.inMilliseconds != 0)
-          _events(AudioManagerEvents.seekComplete, _position);
+        if (_duration.inMilliseconds != 0)
+          _onEvents(AudioManagerEvents.seekComplete, _position);
         break;
       case "buffering":
-        if (_events != null)
-          _events(AudioManagerEvents.buffering, call.arguments);
+        _onEvents(AudioManagerEvents.buffering, call.arguments);
         break;
       case "playstatus":
         _setPlaying(call.arguments ?? false);
@@ -118,62 +115,61 @@ class AudioManager {
           _position = _duration;
           _setPlaying(false);
         }
-        if (_events != null)
-          _events(AudioManagerEvents.timeupdate,
-              {"position": _position, "duration": _duration});
+        _onEvents(AudioManagerEvents.timeupdate,
+            {"position": _position, "duration": _duration});
         break;
       case "error":
         _error = call.arguments;
         if (_playing) _setPlaying(false);
-        if (_events != null) _events(AudioManagerEvents.error, _error);
+        _onEvents(AudioManagerEvents.error, _error);
         break;
       case "next":
         if (intercepter) next();
-        if (_events != null) _events(AudioManagerEvents.next, null);
+        _onEvents(AudioManagerEvents.next, null);
         break;
       case "previous":
         if (intercepter) previous();
-        if (_events != null) _events(AudioManagerEvents.previous, null);
+        _onEvents(AudioManagerEvents.previous, null);
         break;
       case "ended":
-        if (_events != null) _events(AudioManagerEvents.ended, null);
+        _onEvents(AudioManagerEvents.ended, null);
         break;
       case "stop":
-        if (_events != null) _events(AudioManagerEvents.stop, null);
+        _onEvents(AudioManagerEvents.stop, null);
         _reset();
         break;
       case "volumeChange":
         _volume = call.arguments;
-        if (_events != null) _events(AudioManagerEvents.volumeChange, _volume);
+        _onEvents(AudioManagerEvents.volumeChange, _volume);
         break;
       default:
-        if (_events != null) _events(AudioManagerEvents.unknow, call.arguments);
+        _onEvents(AudioManagerEvents.unknow, call.arguments);
         break;
     }
     return Future.value(true);
   }
 
-  bool _initialize;
   String _preprocessing() {
     var errMsg = "";
     if (_info == null) errMsg = "you must invoke the [start] method first";
     if (_error != null) errMsg = _error;
-    if (_initialize != null && !_initialize)
-      errMsg =
-          "you must invoke the [start] method after calling the [stop] method";
     if (_isLoading) errMsg = "audio resource loading....";
 
-    if (errMsg.isNotEmpty) {
-      if (_events != null) _events(AudioManagerEvents.error, errMsg);
-    }
+    if (errMsg.isNotEmpty) _onEvents(AudioManagerEvents.error, errMsg);
     return errMsg;
   }
 
   Events _events;
+  bool _initialize;
 
   /// callback events
   void onEvents(Events events) {
     _events = events;
+  }
+
+  void _onEvents(AudioManagerEvents events, args) {
+    if (_events == null) return;
+    _events(events, args);
   }
 
   Future<String> get platformVersion async {
@@ -223,7 +219,7 @@ class AudioManager {
     _auto = auto ?? true;
     _curIndex = index ?? _curIndex;
     _info = _initRandom();
-    if (_events != null) _events(AudioManagerEvents.start, _info);
+    _onEvents(AudioManagerEvents.start, _info);
 
     _isLoading = true;
     _initialize = true;
@@ -247,6 +243,10 @@ class AudioManager {
   /// [return] Returns the current playback status
   Future<bool> playOrPause() async {
     if (_preprocessing().isNotEmpty) return false;
+
+    if (_initialize == false && _playing == false) {
+      play(index: _curIndex, auto: true);
+    }
     bool playing = await _channel.invokeMethod("playOrPause");
     _setPlaying(playing);
     return playing;
@@ -291,15 +291,17 @@ class AudioManager {
 
   /// stop play
   stop() {
-    _channel.invokeMethod("stop");
-    _initialize = false;
     _reset();
+    _initialize = false;
+    _channel.invokeMethod("stop");
   }
 
   _reset() {
-    _duration = Duration(milliseconds: 0);
+    // _duration = Duration(milliseconds: 0);
     _position = Duration(milliseconds: 0);
     _setPlaying(false);
+    _onEvents(AudioManagerEvents.timeupdate,
+        {"position": _position, "duration": _duration});
   }
 
   /// release all resource

@@ -1,8 +1,9 @@
-## 0.5.7
+## 0.5.7+1
 - Fix Crush while playing androin audio in offline [#28](https://github.com/jeromexiong/audio_manager/issues/28)
 - Fix play local files [#37](https://github.com/jeromexiong/audio_manager/issues/37)
 - Fix Repeat one [#40](https://github.com/jeromexiong/audio_manager/issues/40)
 - Fix #36, #43, #45, #47
+- Fix stop and play
 
 ## 0.5.5+3
 
