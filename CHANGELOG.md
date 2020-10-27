@@ -1,3 +1,6 @@
+## 0.6.1
+- support web
+
 ## 0.5.7+1
 - Fix Crush while playing androin audio in offline [#28](https://github.com/jeromexiong/audio_manager/issues/28)
 - Fix play local files [#37](https://github.com/jeromexiong/audio_manager/issues/37)
