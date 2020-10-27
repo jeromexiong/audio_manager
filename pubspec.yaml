@@ -10,6 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:
@@ -23,3 +25,6 @@ flutter:
         pluginClass: AudioManagerPlugin
       ios:
         pluginClass: AudioManagerPlugin
+      web:
+        pluginClass: AudioManagerPlugin
+        fileName: audio_manager_web.dart
