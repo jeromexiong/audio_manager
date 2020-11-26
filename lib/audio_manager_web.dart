@@ -122,12 +122,12 @@ class AudioManagerPlugin {
         return ("Browser ");
       case "start":
         final String url = arguments["url"];
-        String title = arguments["title"];
-        String desc = arguments["desc"];
-        String cover = arguments["cover"];
+        // String title = arguments["title"];
+        // String desc = arguments["desc"];
+        // String cover = arguments["cover"];
         bool isAuto = arguments["isAuto"] ?? false;
-        bool isLocal = arguments["isLocal"] ?? false;
-        bool isLocalCover = arguments["isLocalCover"] ?? false;
+        // bool isLocal = arguments["isLocal"] ?? false;
+        // bool isLocalCover = arguments["isLocalCover"] ?? false;
         player = await start(playerId, url);
         player.player.autoplay = isAuto;
         return 1;

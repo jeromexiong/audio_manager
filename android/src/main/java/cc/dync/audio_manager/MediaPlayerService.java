@@ -214,7 +214,7 @@ public class MediaPlayerService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel notificationChannel;
             notificationChannel = new NotificationChannel(NOTIFICATION_CHANNEL_ID,
-                    "后台录轨迹的通知", NotificationManager.IMPORTANCE_LOW);
+                    "Notification display", NotificationManager.IMPORTANCE_LOW);
             notificationManager.createNotificationChannel(notificationChannel);
         }
 

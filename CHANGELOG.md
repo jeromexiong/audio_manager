@@ -1,5 +1,6 @@
-## 0.6.1
+## 0.6.2
 - support web
+- update android notification text to english
 
 ## 0.5.7+1
 - Fix Crush while playing androin audio in offline [#28](https://github.com/jeromexiong/audio_manager/issues/28)
