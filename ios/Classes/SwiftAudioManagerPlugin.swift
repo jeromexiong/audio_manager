@@ -55,6 +55,7 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
                 result("参数错误")
                 return
             }
+            AudioManager.default.activateSession()
             AudioManager.default.title = arguments["title"] as? String
             AudioManager.default.desc = arguments["desc"] as? String
             if let cover = arguments["cover"] as? String, let isLocalCover = arguments["isLocalCover"] as? Bool {
