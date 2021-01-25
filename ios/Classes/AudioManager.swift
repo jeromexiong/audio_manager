@@ -331,6 +331,11 @@ public extension AudioManager {
     /// 注册后台播放
     /// register in application didFinishLaunchingWithOptions method
     func registerBackground(){
+        NotificationCenter.default.addObserver(self, selector: #selector(handleRouteChange(_:)), name: AVAudioSession.routeChangeNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(audioSessionInterrupted(_:)), name: AVAudioSession.interruptionNotification, object: nil)
+    }
+    
+    func activateSession() {
         do{
             try session.setActive(true)
             try session.setCategory(.playback, options: [.allowBluetooth, .mixWithOthers])
@@ -342,9 +347,6 @@ public extension AudioManager {
         }catch{
             onEvents?(.error(error as NSError))
         }
-        
-        NotificationCenter.default.addObserver(self, selector: #selector(handleRouteChange(_:)), name: AVAudioSession.routeChangeNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(audioSessionInterrupted(_:)), name: AVAudioSession.interruptionNotification, object: nil)
     }
     
     /// 中断结束后继续播放

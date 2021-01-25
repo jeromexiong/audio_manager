@@ -55,7 +55,7 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
                 result("参数错误")
                 return
             }
-            AudioManager.default.registerBackground()
+            AudioManager.default.activateSession()
             AudioManager.default.title = arguments["title"] as? String
             AudioManager.default.desc = arguments["desc"] as? String
             if let cover = arguments["cover"] as? String, let isLocalCover = arguments["isLocalCover"] as? Bool {
@@ -131,6 +131,7 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
     }
     
     public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable : Any] = [:]) -> Bool {
+        AudioManager.default.registerBackground()
         return true
     }
     
