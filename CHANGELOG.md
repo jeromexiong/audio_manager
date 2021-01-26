@@ -1,4 +1,4 @@
-## 0.6.2
+## 0.7.1
 - support web
 - update android notification text to english
 

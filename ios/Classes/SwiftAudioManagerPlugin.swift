@@ -37,8 +37,6 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
                 channel.invokeMethod("stop", arguments: nil)
             case .volumeChange(let value):
                 channel.invokeMethod("volumeChange", arguments: value)
-            default:
-                break
             }
         }
     }

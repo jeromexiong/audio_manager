@@ -6,11 +6,11 @@ import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'audio_manager.dart';
 
 class WrappedPlayer {
-  double pausedAt;
+  double pausedAt = 0;
   double currentVolume = 1;
   double currentRate = 1;
   PlayMode playMode = PlayMode.sequence;
-  String currentUrl;
+  String currentUrl = "";
   bool isPlaying = false;
 
   AudioElement player;
@@ -36,33 +36,33 @@ class WrappedPlayer {
   }
 
   void recreateNode() {
-    if (currentUrl == null) {
+    if (currentUrl.isEmpty) {
       return;
     }
     player = AudioElement(currentUrl);
-    player.loop = playMode == PlayMode.single;
-    player.volume = currentVolume;
-    player.playbackRate = currentRate;
+    player?.loop = playMode == PlayMode.single;
+    player?.volume = currentVolume;
+    player?.playbackRate = currentRate;
   }
 
   void seekTo(double position) {
     isPlaying = true;
-    if (currentUrl == null) {
+    if (currentUrl.isEmpty) {
       return;
     }
     if (player == null) {
       recreateNode();
     }
-    player.play();
-    player.currentTime = position;
+    player?.play();
+    player?.currentTime = position;
   }
 
   void resume() {
-    seekTo(pausedAt ?? 0);
+    seekTo(pausedAt);
   }
 
   void pause() {
-    pausedAt = player.currentTime;
+    pausedAt = (player?.currentTime ?? 0) as double;
     _cancel();
   }
 
@@ -89,10 +89,10 @@ class AudioManagerPlugin {
 
   static void registerWith(Registrar registrar) {
     final MethodChannel channel = MethodChannel(
-      'audio_manager',
-      const StandardMethodCodec(),
-      registrar.messenger,
-    );
+        'audio_manager',
+        const StandardMethodCodec(),
+        // ignore: deprecated_member_use
+        registrar.messenger);
 
     final AudioManagerPlugin instance = AudioManagerPlugin();
     channel.setMethodCallHandler(instance.handleMethodCall);
@@ -114,12 +114,13 @@ class AudioManagerPlugin {
   }
 
   Future<dynamic> handleMethodCall(MethodCall call) async {
-    Map<String, dynamic> arguments = call.arguments;
-    final playerId = call.arguments['playerId'];
+    Map<String, dynamic> arguments = call.arguments ?? {};
+    final playerId = arguments['playerId'] ?? "0";
     var player = getOrCreatePlayer(playerId);
+    print("------arguments: ${call.method}, player: $arguments");
     switch (call.method) {
       case "getPlatformVersion":
-        return ("Browser ");
+        return "Browser ";
       case "start":
         final String url = arguments["url"];
         // String title = arguments["title"];
@@ -129,7 +130,7 @@ class AudioManagerPlugin {
         // bool isLocal = arguments["isLocal"] ?? false;
         // bool isLocalCover = arguments["isLocalCover"] ?? false;
         player = await start(playerId, url);
-        player.player.autoplay = isAuto;
+        player.player?.autoplay = isAuto;
         return 1;
       case "playOrPause":
         if (player.isPlaying) {
