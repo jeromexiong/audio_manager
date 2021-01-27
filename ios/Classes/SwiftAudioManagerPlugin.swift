@@ -25,7 +25,9 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
             case .timeupdate(let position, let duration):
                 channel.invokeMethod("timeupdate", arguments: ["position": Int(position*1000), "duration": Int(duration*1000)])
             case .error(let e):
-                AudioManager.default.clean()
+                DispatchQueue.main.async {
+                    AudioManager.default.clean()
+                }
                 channel.invokeMethod("error", arguments: e.description)
             case .next:
                 channel.invokeMethod("next", arguments: nil)

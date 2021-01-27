@@ -215,14 +215,18 @@ class AudioManager {
   Future<String> play({int index, bool auto}) async {
     if (index != null && (index < 0 || index >= _audioList.length))
       throw "invalid index";
-    stop();
     _auto = auto ?? true;
     _curIndex = index ?? _curIndex;
-    _info = _initRandom();
+    final random = _initRandom();
+    // Do not replay the same url
+    if (_info.url != random.url) {
+      stop();
+      _isLoading = true;
+      _initialize = true;
+    }
+    _info = random;
     _onEvents(AudioManagerEvents.start, _info);
 
-    _isLoading = true;
-    _initialize = true;
     final regx = new RegExp(r'^(http|https|file):\/\/\/?([\w.]+\/?)\S*');
     final result = await _channel.invokeMethod('start', {
       "url": _info.url,
@@ -297,7 +301,8 @@ class AudioManager {
   }
 
   _reset() {
-    // _duration = Duration(milliseconds: 0);
+    if (_isLoading) return;
+    _duration = Duration(milliseconds: 0);
     _position = Duration(milliseconds: 0);
     _setPlaying(false);
     _onEvents(AudioManagerEvents.timeupdate,

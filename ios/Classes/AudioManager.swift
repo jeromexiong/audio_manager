@@ -119,13 +119,13 @@ public extension AudioManager {
             stop(url)
             if isLocal {
                 guard let path = Bundle.main.path(forResource: link, ofType: "") else {
-                    onEvents?(.error(NSError(domain: domain, code: -1, userInfo: ["msg": "link [\(link)] is invalid"])))
+                    onError(.custom(-1, "link [\(link)] is invalid"))
                     return
                 }
                 playerItem = AVPlayerItem(url: URL(fileURLWithPath: path))
             }else {
                 guard let path = transformURLString(link)?.url else {
-                    onEvents?(.error(NSError(domain: domain, code: -1, userInfo: ["msg": "link [\(link)] is invalid"])))
+                    onError(.custom(-1, "link [\(link)] is invalid"))
                     return
                 }
                 playerItem = AVPlayerItem(url: path)
@@ -138,26 +138,25 @@ public extension AudioManager {
                 queue.automaticallyWaitsToMinimizeStalling = false
             }
             url = link
-            
-            observingProps()
-            observingTimeChanges()
-            setRemoteInfo()
-            activateSession()
-            UIApplication.shared.beginReceivingRemoteControlEvents()
-            NotificationCenter.default.addObserver(self, selector: #selector(playerFinishPlaying(_:)), name: .AVPlayerItemDidPlayToEndTime, object: queue.currentItem)
         }else {
             play(link)
         }
+        
+        observingProps()
+        observingTimeChanges()
+        setRemoteInfo()
+        activateSession()
+        UIApplication.shared.beginReceivingRemoteControlEvents()
+        NotificationCenter.default.addObserver(self, selector: #selector(playerFinishPlaying(_:)), name: .AVPlayerItemDidPlayToEndTime, object: queue.currentItem)
     }
     
     func seek(to position: Double, link: String? = nil) {
-        guard let _url = link ?? url, let playerItem = _playingMusic[_url] as? AVPlayerItem,
-              let timescale = queue.currentItem?.asset.duration.timescale else {
-            onEvents?(.error(NSError(domain: domain, code: 0, userInfo: ["msg": "you have to invoke start method first"])))
+        guard let _url = link ?? url, let playerItem = _playingMusic[_url] as? AVPlayerItem else {
+            onError(.notReady)
             return
         }
         if queue.currentItem?.status != .readyToPlay { return }
-        
+        let timescale = queue.currentItem?.asset.duration.timescale ?? 0
         playerItem.seek(to: CMTime(seconds: position, preferredTimescale: timescale)) {[weak self] (flag) in
             if flag {
                 self?.onEvents?(.seekComplete(Int(position * 1000)))
@@ -191,8 +190,9 @@ public extension AudioManager {
     
     /// 播放▶️音乐🎵
     func play(_ link: String? = nil) {
-        guard let _ = _playingMusic[link ?? url ?? ""] as? AVPlayerItem else {
-            onEvents?(.error(NSError(domain: domain, code: 0, userInfo: ["msg": "you have to invoke start method first"])))
+        if playing { return }
+        guard let playerItem = _playingMusic[link ?? url ?? ""] as? AVPlayerItem, playerItem.status == .readyToPlay else {
+            onError(.notReady)
             return
         }
         if #available(iOS 10.0, *) {
@@ -207,8 +207,9 @@ public extension AudioManager {
     
     /// 暂停⏸音乐🎵
     func pause(_ link: String? = nil) {
+        if !playing { return }
         guard let _ = _playingMusic[link ?? url ?? ""] as? AVPlayerItem else {
-            onEvents?(.error(NSError(domain: domain, code: 0, userInfo: ["msg": "you have to invoke start method first"])))
+            onError(.notReady)
             return
         }
         queue.pause()
@@ -241,7 +242,23 @@ public extension AudioManager {
         UIApplication.shared.endReceivingRemoteControlEvents()
     }
 }
+private enum AudioError {
+    case notReady
+    case custom(Int, String)
+    
+    var description: (Int, String) {
+        switch self {
+        case .notReady:
+            return (0, "not ready to play")
+        case let .custom(code, msg):
+            return (code, msg)
+        }
+    }
+}
 fileprivate extension AudioManager {
+    func onError(_ error: AudioError) {
+        onEvents?(.error(NSError(domain: domain, code: error.description.0, userInfo: ["msg": error.description.1])))
+    }
     var domain: String {
         return "\((#file as NSString).lastPathComponent)[\(#line)])"
     }
@@ -270,7 +287,7 @@ fileprivate extension AudioManager {
     }
     @objc func playerFinishPlaying(_ n: Notification) {
         queue.seek(to: CMTime.zero)
-        pause()
+        stop()
         onEvents?(.ended)
     }
     /// 监听属性变化
