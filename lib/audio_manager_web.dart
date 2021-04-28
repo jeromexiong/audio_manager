@@ -13,7 +13,7 @@ class WrappedPlayer {
   String currentUrl = "";
   bool isPlaying = false;
 
-  AudioElement player;
+  AudioElement? player;
 
   void start(String url) {
     currentUrl = url;

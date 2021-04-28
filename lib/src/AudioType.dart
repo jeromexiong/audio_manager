@@ -42,17 +42,17 @@ class PlaybackState {
 
   final Duration bufferedSize;
 
-  final AudioRate speed;
+  final AudioRate? speed;
 
   final error;
 
   const PlaybackState(
     this.state, {
-    this.position,
-    this.bufferedSize,
+    required this.position,
+    required this.bufferedSize,
     this.speed,
     this.error,
-  }) : assert(state != null);
+  });
 
   const PlaybackState.none()
       : this(
