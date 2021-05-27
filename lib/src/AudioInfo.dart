@@ -4,7 +4,8 @@ class AudioInfo {
   String desc;
   String coverUrl;
 
-  AudioInfo(this.url, {required this.title, required this.desc, required this.coverUrl});
+  AudioInfo(this.url,
+      {required this.title, required this.desc, required this.coverUrl});
 
   AudioInfo.fromJson(Map<String, dynamic> json)
       : url = json['url'],

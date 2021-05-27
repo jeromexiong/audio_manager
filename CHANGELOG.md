@@ -1,3 +1,7 @@
+## 0.8.1
+- update to flutter 2.0
+- fix to null safety
+
 ## 0.7.3
 - fix ios replay
 - support web
