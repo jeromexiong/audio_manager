@@ -174,7 +174,11 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
                     if (registrar != null) {
                         info.cover = registrar.lookupKeyForAsset(cover);
                     } else if (flutterAssets != null) {
-                        info.cover = AudioManagerPlugin.flutterAssets.getAssetFilePathByName(cover);
+                        if (helper.isDataDirFile(cover)) {
+                            info.cover = cover;
+                        } else {
+                            info.cover = AudioManagerPlugin.flutterAssets.getAssetFilePathByName(cover);
+                        }
                     }
                 }
 

@@ -19,10 +19,13 @@ import android.view.SurfaceView;
 import androidx.annotation.RequiresApi;
 
 import java.io.BufferedInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
 import java.util.Objects;
 
 /**
@@ -198,8 +201,15 @@ public class MediaPlayerHelper {
             return instance;
         }
         try {
-            AssetManager am = context.getAssets();
-            InputStream inputStream = am.open(url);
+            InputStream inputStream;
+
+            if (isDataDirFile(url)) {
+                inputStream = new FileInputStream(url);
+            } else {
+                AssetManager am = context.getAssets();
+                inputStream = am.open(url);
+            }
+
             service.updateCover(BitmapFactory.decodeStream(inputStream));
 
         } catch (IOException e) {
@@ -311,6 +321,18 @@ public class MediaPlayerHelper {
         } else {
             beginPlayDataSource(new ByteMediaDataSource(videoBuffer));
         }
+    }
+
+    /**
+     * Whether the file is inside the application's data directory or not
+     *
+     * @param filePath filePath
+     * @return true if the file is inside the application's data directory, false otherwise
+     */
+    public boolean isDataDirFile(String filePath) {
+        Path path = FileSystems.getDefault().getPath(filePath);
+        Path dataDirPath = FileSystems.getDefault().getPath(context.getApplicationInfo().dataDir);
+        return path.startsWith(dataDirPath);
     }
 
     /**
