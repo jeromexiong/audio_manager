@@ -249,11 +249,13 @@ class AudioManager {
     if (_preprocessing().isNotEmpty) return false;
 
     if (_initialize == false && _playing == false) {
-      play(index: _curIndex, auto: true);
+      await play(index: _curIndex, auto: true);
+      return true;
+    } else {
+      bool playing = await _channel.invokeMethod("playOrPause");
+      _setPlaying(playing);
+      return playing;
     }
-    bool playing = await _channel.invokeMethod("playOrPause");
-    _setPlaying(playing);
-    return playing;
   }
 
   /// to play status

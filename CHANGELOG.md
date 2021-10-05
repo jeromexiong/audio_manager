@@ -1,3 +1,7 @@
+## 0.8.2
+- fix `playOrPause` method error
+- Add support for loading covers from the app's data dir on Android
+
 ## 0.8.1
 - update to flutter 2.0
 - fix to null safety

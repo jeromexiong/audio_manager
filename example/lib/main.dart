@@ -74,6 +74,7 @@ class _MyAppState extends State<MyApp> {
           _duration = AudioManager.instance.duration;
           _slider = 0;
           setState(() {});
+          AudioManager.instance.updateLrc("audio resource loading....");
           break;
         case AudioManagerEvents.ready:
           print("ready to play");
