@@ -16,11 +16,11 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
   bool isPlaying = false;
-  Duration _duration;
-  Duration _position;
-  double _slider;
-  double _sliderVolume;
-  String _error;
+  Duration _duration = Duration(seconds: 0);
+  Duration _position = Duration(seconds: 0);
+  double _slider = 0.0;
+  double _sliderVolume = 0.0;
+  String _error = "";
   num curIndex = 0;
   PlayMode playMode = AudioManager.instance.playMode;
 
@@ -57,8 +57,8 @@ class _MyAppState extends State<MyApp> {
 
   void setupAudio() {
     List<AudioInfo> _list = [];
-    list.forEach((item) => _list.add(AudioInfo(item["url"],
-        title: item["title"], desc: item["desc"], coverUrl: item["coverUrl"])));
+    list.forEach((item) => _list.add(AudioInfo(item["url"].toString(),
+        title: item["title"].toString(), desc: item["desc"].toString(), coverUrl: item["coverUrl"].toString())));
 
     AudioManager.instance.audioList = _list;
     AudioManager.instance.intercepter = true;
@@ -78,7 +78,7 @@ class _MyAppState extends State<MyApp> {
           break;
         case AudioManagerEvents.ready:
           print("ready to play");
-          _error = null;
+          _error = "";
           _sliderVolume = AudioManager.instance.volume;
           _position = AudioManager.instance.position;
           _duration = AudioManager.instance.duration;
@@ -185,7 +185,7 @@ class _MyAppState extends State<MyApp> {
                     itemCount: list.length),
               ),
               Center(
-                  child: Text(_error != null
+                  child: Text(_error != ""
                       ? _error
                       : "${AudioManager.instance.info.title} lrc text: $_position")),
               bottomPanel()
@@ -306,7 +306,7 @@ class _MyAppState extends State<MyApp> {
                     });
                   },
                   onChangeEnd: (value) {
-                    if (_duration != null) {
+                    if (_duration != Duration(seconds:0)) {
                       Duration msec = Duration(
                           milliseconds:
                               (_duration.inMilliseconds * value).round());
@@ -325,7 +325,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   String _formatDuration(Duration d) {
-    if (d == null) return "--:--";
+    if (d == Duration(seconds:0)) return "--:--";
     int minute = d.inMinutes;
     int second = (d.inSeconds > 60) ? (d.inSeconds % 60) : d.inSeconds;
     String format = ((minute < 10) ? "0$minute" : "$minute") +
