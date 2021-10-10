@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:audio_manager/src/AudioType.dart';
 import 'package:audio_manager/src/AudioInfo.dart';
 
+import 'src/AudioType.dart';
+
 export 'package:audio_manager/src/AudioInfo.dart';
 export 'package:audio_manager/src/AudioType.dart';
 
@@ -71,6 +73,7 @@ class AudioManager {
   int get curIndex => _curIndex;
   int _curIndex = 0;
   List<int> _randoms = [];
+  List<int> _randomsReverse = [];
 
   /// Play mode [sequence, shuffle, single], default `sequence`
   PlayMode get playMode => _playMode;
@@ -349,6 +352,11 @@ class AudioManager {
       if (_randoms.length != _audioList.length) {
         _randoms = _audioList.asMap().keys.toList();
         _randoms.shuffle();
+
+        _randomsReverse = List<int>.filled(_randoms.length, 0);
+        for (int i = 0; i < _randoms.length; ++i) {
+          _randomsReverse[_randoms[i]] = i;
+        }
       }
       _curIndex = _randoms[_curIndex];
     }
@@ -371,9 +379,15 @@ class AudioManager {
 
   /// play previous audio
   Future<String> previous() async {
-    if (playMode != PlayMode.single) {
-      int index = _curIndex - 1;
-      _curIndex = index < 0 ? _audioList.length - 1 : index;
+    switch (playMode) {
+      case PlayMode.sequence:
+        int index = _curIndex - 1;
+        _curIndex = index < 0 ? _audioList.length - 1 : index;
+        break;
+      case PlayMode.shuffle:
+        _curIndex = _randomsReverse[_curIndex];
+        break;
+      default:
     }
     return await play();
   }
