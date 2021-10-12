@@ -59,18 +59,23 @@ class AudioManager {
   /// list of playback. Used to record playlists
   List<AudioInfo> get audioList => _audioList;
   List<AudioInfo> _audioList = [];
+  final _random = Random();
 
   /// Set up playlists. Use the [play] or [start] method if you want to play
   set audioList(List<AudioInfo> list) {
     if (list.length == 0) throw "[list] can not be null or empty";
     _audioList = list;
-    _info = _initRandom();
+
+    if (playMode == PlayMode.shuffle) {
+      _curIndex = _pickRandomIndex();
+    }
+
+    _info = _selectTrack();
   }
 
   /// Currently playing subscript of [audioList]
   int get curIndex => _curIndex;
   int _curIndex = 0;
-  List<int> _randoms = [];
 
   /// Play mode [sequence, shuffle, single], default `sequence`
   PlayMode get playMode => _playMode;
@@ -217,14 +222,14 @@ class AudioManager {
       throw "invalid index";
     _auto = auto ?? true;
     _curIndex = index ?? _curIndex;
-    final random = _initRandom();
+    final trackInfo = _selectTrack();
     // Do not replay the same url
-    if (_info!.url != random.url) {
+    if (_info!.url != trackInfo.url) {
       stop();
       _isLoading = true;
       _initialize = true;
     }
-    _info = random;
+    _info = trackInfo;
     _onEvents(AudioManagerEvents.start, _info);
 
     final regx = new RegExp(r'^(http|https|file):\/\/\/?([\w.]+\/?)\S*');
@@ -344,14 +349,22 @@ class AudioManager {
     return _playMode;
   }
 
-  AudioInfo _initRandom() {
-    if (playMode == PlayMode.shuffle) {
-      if (_randoms.length != _audioList.length) {
-        _randoms = _audioList.asMap().keys.toList();
-        _randoms.shuffle();
-      }
-      _curIndex = _randoms[_curIndex];
+  int _pickRandomIndex() {
+    if (_audioList.length < 2) {
+      return 0;
     }
+
+    int newIndex = _curIndex;
+
+    // Make sure that we don't re-select the current index
+    do {
+      newIndex = _random.nextInt(_audioList.length);
+    } while (newIndex == _curIndex);
+
+    return newIndex;
+  }
+
+  AudioInfo _selectTrack() {
     if (_curIndex >= _audioList.length) {
       _curIndex = _audioList.length - 1;
     }
@@ -363,18 +376,32 @@ class AudioManager {
 
   /// play next audio
   Future<String> next() async {
-    if (playMode != PlayMode.single) {
-      _curIndex = (_curIndex + 1) % _audioList.length;
+    switch (playMode) {
+      case PlayMode.sequence:
+        _curIndex = (_curIndex + 1) % _audioList.length;
+        break;
+      case PlayMode.shuffle:
+        _curIndex = _pickRandomIndex();
+        break;
+      default:
     }
+
     return await play();
   }
 
   /// play previous audio
   Future<String> previous() async {
-    if (playMode != PlayMode.single) {
-      int index = _curIndex - 1;
-      _curIndex = index < 0 ? _audioList.length - 1 : index;
+    switch (playMode) {
+      case PlayMode.sequence:
+        int index = _curIndex - 1;
+        _curIndex = index < 0 ? _audioList.length - 1 : index;
+        break;
+      case PlayMode.shuffle:
+        _curIndex = _pickRandomIndex();
+        break;
+      default:
     }
+
     return await play();
   }
 
