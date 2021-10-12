@@ -59,6 +59,7 @@ class AudioManager {
   /// list of playback. Used to record playlists
   List<AudioInfo> get audioList => _audioList;
   List<AudioInfo> _audioList = [];
+  final _random = Random();
 
   /// Set up playlists. Use the [play] or [start] method if you want to play
   set audioList(List<AudioInfo> list) {
@@ -356,9 +357,8 @@ class AudioManager {
     int newIndex = _curIndex;
 
     // Make sure that we don't re-select the current index
-    final random = Random();
     do {
-      newIndex = random.nextInt(_audioList.length);
+      newIndex = _random.nextInt(_audioList.length);
     } while (newIndex == _curIndex);
 
     return newIndex;
