@@ -173,25 +173,57 @@ public class MediaPlayerService extends Service {
     private void setupNotification() {
         // 设置点击通知结果
 //        Intent intent = new Intent("android.flutter.audio_manager.activity");
+        PendingIntent cpi;
         Intent intent = new Intent(this, AudioManagerPlugin.class);
-        PendingIntent contentPendingIntent = PendingIntent.getActivity(this, CONTENT_PENDING_REQUESTS, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-        // 自定义布局
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        PendingIntent contentPendingIntent = PendingIntent.getActivity(this, 1023, intent, PendingIntent.FLAG_UPDATE_CURRENT | 67108864);
         views = new RemoteViews(getPackageName(), R.layout.layout_mediaplayer);
+        cpi=contentPendingIntent;
+        }else{
+        PendingIntent contentPendingIntent = PendingIntent.getActivity(this, 1023, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        views = new RemoteViews(getPackageName(), R.layout.layout_mediaplayer);
+        cpi=contentPendingIntent;
+
+        }
+        // 自定义布局
         // 下一首
         Intent intentNext = new Intent(ACTION_NEXT);
-        PendingIntent nextPendingIntent = PendingIntent.getBroadcast(this, NEXT_PENDING_REQUESTS, intentNext, PendingIntent.FLAG_CANCEL_CURRENT);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        PendingIntent nextPendingIntent = PendingIntent.getBroadcast(this, 1024, intentNext, PendingIntent.FLAG_CANCEL_CURRENT | 33554432);
         views.setOnClickPendingIntent(R.id.iv_next, nextPendingIntent);
+        
+        }else{
+        PendingIntent nextPendingIntent = PendingIntent.getBroadcast(this, 1024, intentNext, PendingIntent.FLAG_CANCEL_CURRENT);
+        views.setOnClickPendingIntent(R.id.iv_next, nextPendingIntent);
+
+        }
+        
 
         // 暂停/播放
         Intent intentPlay = new Intent(ACTION_PLAY_OR_PAUSE);
-        PendingIntent playPendingIntent = PendingIntent.getBroadcast(this, PLAY_PENDING_REQUESTS, intentPlay, PendingIntent.FLAG_CANCEL_CURRENT);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        PendingIntent playPendingIntent = PendingIntent.getBroadcast(this, 1025, intentPlay, PendingIntent.FLAG_CANCEL_CURRENT | 33554432);
         views.setOnClickPendingIntent(R.id.iv_pause, playPendingIntent);
+
+        }else{
+        PendingIntent playPendingIntent = PendingIntent.getBroadcast(this, 1025, intentPlay, PendingIntent.FLAG_CANCEL_CURRENT);
+        views.setOnClickPendingIntent(R.id.iv_pause, playPendingIntent);
+
+        }
+        
 
         // 停止
         Intent intentStop = new Intent(ACTION_STOP);
-        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(this, STOP_PENDING_REQUESTS, intentStop, PendingIntent.FLAG_CANCEL_CURRENT);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(this, 1026, intentStop, PendingIntent.FLAG_CANCEL_CURRENT | 33554432);
         views.setOnClickPendingIntent(R.id.iv_cancel, stopPendingIntent);
+
+            }else{
+        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(this, 1026, intentStop, PendingIntent.FLAG_CANCEL_CURRENT);
+        views.setOnClickPendingIntent(R.id.iv_cancel, stopPendingIntent);
+
+        }
+        
 
         builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
                 // 设置状态栏小图标
@@ -203,7 +235,7 @@ public class MediaPlayerService extends Service {
                 // 点击通知后自动清除
                 .setAutoCancel(false)
                 // 设置点击通知效果
-                .setContentIntent(contentPendingIntent)
+                .setContentIntent(cpi)
                 // 设置删除时候出发的动作
 //                .setDeleteIntent(delPendingIntent)
                 // 自定义视图
