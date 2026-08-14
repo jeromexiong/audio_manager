@@ -64,13 +64,15 @@ class AudioManager {
   set audioList(List<AudioInfo> list) {
     if (list.length == 0) throw "[list] can not be null or empty";
     _audioList = list;
-    _info = _initRandom();
+    if (playMode == PlayMode.shuffle) _resetShuffleQueue();
+    _info = _selectTrack();
   }
 
   /// Currently playing subscript of [audioList]
   int get curIndex => _curIndex;
   int _curIndex = 0;
-  List<int> _randoms = [];
+  List<int> _shuffleQueue = [];
+  int _shuffleCursor = 0;
 
   /// Play mode [sequence, shuffle, single], default `sequence`
   PlayMode get playMode => _playMode;
@@ -217,7 +219,21 @@ class AudioManager {
       throw "invalid index";
     _auto = auto ?? true;
     _curIndex = index ?? _curIndex;
-    final random = _initRandom();
+    if (playMode == PlayMode.shuffle) {
+      if (_shuffleQueue.length != _audioList.length) _resetShuffleQueue();
+      if (index != null) {
+        _shuffleCursor = _shuffleQueue.indexOf(index);
+        if (_shuffleCursor < 0) {
+          _resetShuffleQueue();
+          _shuffleCursor = _shuffleQueue.indexOf(index);
+          if (_shuffleCursor < 0) {
+            _shuffleCursor = 0;
+            _curIndex = _shuffleQueue[_shuffleCursor];
+          }
+        }
+      }
+    }
+    final random = _selectTrack();
     // Do not replay the same url
     if (_info!.url != random.url) {
       stop();
@@ -323,6 +339,28 @@ class AudioManager {
     _channel.invokeMethod("updateLrc", {"lrc": lrc});
   }
 
+  /// Update notification/remote-control metadata without restarting playback.
+  Future<String> updateInfo(
+      {String? title, String? desc, String? coverUrl}) async {
+    if (_preprocessing().isNotEmpty) return _preprocessing();
+    final AudioInfo current = _info!;
+    final String newTitle = title ?? current.title;
+    final String newDesc = desc ?? current.desc;
+    final String newCover = coverUrl ?? current.coverUrl;
+    current.title = newTitle;
+    current.desc = newDesc;
+    current.coverUrl = newCover;
+
+    final regx = new RegExp(r'^(http|https|file):\/\/\/?([\w.]+\/?)\S*');
+    final result = await _channel.invokeMethod("updateInfo", {
+      "title": newTitle,
+      "desc": newDesc,
+      "cover": newCover,
+      "isLocalCover": !regx.hasMatch(newCover),
+    });
+    return result ?? "";
+  }
+
   /// Switch playback mode. `Playmode` priority is greater than `index`
   PlayMode nextMode({PlayMode? playMode, int? index}) {
     int mode = index ?? (_playMode.index + 1) % 3;
@@ -333,6 +371,7 @@ class AudioManager {
         break;
       case 1:
         _playMode = PlayMode.shuffle;
+        _resetShuffleQueue();
         break;
       case 2:
         _playMode = PlayMode.single;
@@ -344,18 +383,20 @@ class AudioManager {
     return _playMode;
   }
 
-  AudioInfo _initRandom() {
+  void _resetShuffleQueue() {
+    if (_audioList.length == 0) return;
+    _shuffleQueue = _audioList.asMap().keys.toList()..shuffle();
+    _shuffleCursor = _shuffleQueue.indexOf(_curIndex);
+    if (_shuffleCursor < 0) _shuffleCursor = 0;
+  }
+
+  AudioInfo _selectTrack() {
     if (playMode == PlayMode.shuffle) {
-      if (_randoms.length != _audioList.length) {
-        _randoms = _audioList.asMap().keys.toList();
-        _randoms.shuffle();
-      }
-      _curIndex = _randoms[_curIndex];
-    }
-    if (_curIndex >= _audioList.length) {
+      if (_shuffleQueue.length != _audioList.length) _resetShuffleQueue();
+      _curIndex = _shuffleQueue[_shuffleCursor];
+    } else if (_curIndex >= _audioList.length) {
       _curIndex = _audioList.length - 1;
-    }
-    if (_curIndex < 0) {
+    } else if (_curIndex < 0) {
       _curIndex = 0;
     }
     return _audioList[_curIndex];
@@ -363,7 +404,14 @@ class AudioManager {
 
   /// play next audio
   Future<String> next() async {
-    if (playMode != PlayMode.single) {
+    if (playMode == PlayMode.single) {
+      return await play();
+    }
+    if (playMode == PlayMode.shuffle) {
+      if (_shuffleQueue.length != _audioList.length) _resetShuffleQueue();
+      _shuffleCursor = (_shuffleCursor + 1) % _shuffleQueue.length;
+      _curIndex = _shuffleQueue[_shuffleCursor];
+    } else {
       _curIndex = (_curIndex + 1) % _audioList.length;
     }
     return await play();
@@ -371,7 +419,15 @@ class AudioManager {
 
   /// play previous audio
   Future<String> previous() async {
-    if (playMode != PlayMode.single) {
+    if (playMode == PlayMode.single) {
+      return await play();
+    }
+    if (playMode == PlayMode.shuffle) {
+      if (_shuffleQueue.length != _audioList.length) _resetShuffleQueue();
+      _shuffleCursor =
+          (_shuffleCursor - 1 + _shuffleQueue.length) % _shuffleQueue.length;
+      _curIndex = _shuffleQueue[_shuffleCursor];
+    } else {
       int index = _curIndex - 1;
       _curIndex = index < 0 ? _audioList.length - 1 : index;
     }

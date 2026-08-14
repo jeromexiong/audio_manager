@@ -55,30 +55,25 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
                 result("参数错误")
                 return
             }
-            AudioManager.default.title = arguments["title"] as? String
-            AudioManager.default.desc = arguments["desc"] as? String
-            if let cover = arguments["cover"] as? String, let isLocalCover = arguments["isLocalCover"] as? Bool {
-                if !isLocalCover, let _cover = URL(string: cover) {
-                    let request = URLRequest(url: _cover)
-                    NSURLConnection.sendAsynchronousRequest(request, queue: OperationQueue.main) { (_, data, error) in
-                        if let data = data {
-                            AudioManager.default.cover = UIImageView(image: UIImage(data: data))
-                        }
-                        if let error = error as NSError? {
-                            result(error.description)
-                        }
-                    }
-                }else if let path = self.getLocal(SwiftAudioManagerPlugin.instance.registrar, path: cover) {
-                    AudioManager.default.cover = UIImageView(image: UIImage(contentsOfFile: path))
-                }
-            }
+            let title = arguments["title"] as? String
+            let desc = arguments["desc"] as? String
+            let cover = arguments["cover"] as? String
+            let isLocalCover = arguments["isLocalCover"] as? Bool ?? false
             let isLocal = arguments["isLocal"] as? Bool ?? false
+            let isAuto = arguments["isAuto"] as? Bool ?? true
+            AudioManager.default.isAuto = isAuto
+            if let cover = cover {
+                loadCover(cover, isLocalCover: isLocalCover) { coverView in
+                    AudioManager.default.updateMetadata(title: title, desc: desc, cover: coverView)
+                }
+            } else {
+                AudioManager.default.updateMetadata(title: title, desc: desc, cover: nil)
+            }
             if isLocal {
                 url = SwiftAudioManagerPlugin.instance.registrar.lookupKey(forAsset: url)
             }
-            let isAuto = arguments["isAuto"] as? Bool ?? true
-            AudioManager.default.isAuto = isAuto
             AudioManager.default.start(url, isLocal: isLocal)
+            result(nil)
         case "playOrPause":
             if AudioManager.default.playing {
                 AudioManager.default.pause(url)
@@ -97,7 +92,19 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
         case "release":
             AudioManager.default.clean()
         case "updateLrc":
-            AudioManager.default.desc = arguments["lrc"] as? String
+            AudioManager.default.updateMetadata(desc: arguments["lrc"] as? String)
+        case "updateInfo":
+            guard let title = arguments["title"] as? String,
+                  let desc = arguments["desc"] as? String,
+                  let cover = arguments["cover"] as? String else {
+                result("参数错误")
+                return
+            }
+            let isLocalCover = arguments["isLocalCover"] as? Bool ?? false
+            loadCover(cover, isLocalCover: isLocalCover) { coverView in
+                AudioManager.default.updateMetadata(title: title, desc: desc, cover: coverView)
+            }
+            result(nil)
         case "seekTo":
             guard let position = arguments["position"] as? Double else {
                 result("参数错误")
@@ -127,6 +134,29 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
     func getLocal(_ registrar: FlutterPluginRegistrar, path: String) -> String? {
         let key = registrar.lookupKey(forAsset: path)
         return Bundle.main.path(forResource: key, ofType: nil)
+    }
+
+    private func loadCover(_ cover: String, isLocalCover: Bool, completion: @escaping (UIImageView?) -> Void) {
+        if isLocalCover {
+            if let path = self.getLocal(SwiftAudioManagerPlugin.instance.registrar, path: cover) {
+                completion(UIImageView(image: UIImage(contentsOfFile: path)))
+            } else {
+                completion(nil)
+            }
+            return
+        }
+        guard let url = URL(string: cover) else {
+            completion(nil)
+            return
+        }
+        let request = URLRequest(url: url)
+        NSURLConnection.sendAsynchronousRequest(request, queue: OperationQueue.main) { (_, data, error) in
+            if let data = data {
+                completion(UIImageView(image: UIImage(data: data)))
+            } else {
+                completion(nil)
+            }
+        }
     }
     
     public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable : Any] = [:]) -> Bool {

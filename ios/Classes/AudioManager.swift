@@ -112,6 +112,20 @@ open class AudioManager: NSObject {
     }
 }
 public extension AudioManager {
+    /// 更新锁屏/通知信息
+    func updateMetadata(title: String? = nil, desc: String? = nil, cover: UIImageView? = nil) {
+        if let title = title {
+            self.title = title
+        }
+        if let desc = desc {
+            self.desc = desc
+        }
+        if let cover = cover {
+            self.cover = cover
+        }
+        setRemoteInfo()
+    }
+
     /// 必须要调用 start method 才能进行其他操作
     func start(_ link: String, isLocal: Bool = false) {
         var playerItem: AVPlayerItem? = _playingMusic[link] as? AVPlayerItem
@@ -355,9 +369,9 @@ public extension AudioManager {
     func activateSession() {
         do{
             try session.setActive(true)
-            try session.setCategory(.playback, options: [.allowBluetooth, .mixWithOthers])
+            try session.setCategory(.playback, options: [.allowBluetooth, .duckOthers])
             if #available(iOS 10.0, *) {
-                try session.setCategory(.playback, options: [.allowAirPlay, .allowBluetoothA2DP, .mixWithOthers])
+                try session.setCategory(.playback, options: [.allowAirPlay, .allowBluetoothA2DP, .duckOthers])
             }
             try session.overrideOutputAudioPort(.speaker)
             
@@ -555,4 +569,3 @@ extension UIImage {
         return resultImage
     }
 }
-

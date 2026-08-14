@@ -5,6 +5,9 @@ import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.AudioAttributes;
+import android.media.AudioFocusRequest;
+import android.media.AudioManager;
 import android.media.MediaDataSource;
 import android.media.MediaPlayer;
 import android.net.wifi.WifiManager;
@@ -44,6 +47,10 @@ public class MediaPlayerHelper {
     private WifiManager.WifiLock wifiLock;
     private String curUrl = "";//当前初始化url
     private boolean isPrepare = false;
+    private AudioManager audioManager;
+    private AudioFocusRequest audioFocusRequest;
+    private boolean audioFocusGranted = false;
+    private AudioManager.OnAudioFocusChangeListener audioFocusChangeListener;
 
     static class MediaInfo {
         String title;
@@ -191,12 +198,29 @@ public class MediaPlayerHelper {
         return instance;
     }
 
+    MediaPlayerHelper updateInfo(String title, String desc, String cover) {
+        if (title != null) mediaInfo.title = title;
+        if (desc != null) mediaInfo.desc = desc;
+        if (cover != null) {
+            mediaInfo.cover = cover;
+            updateCover(mediaInfo.cover);
+        }
+        if (service != null) {
+            service.updateNotification(isPlaying(), mediaInfo.title, mediaInfo.desc);
+        }
+        return instance;
+    }
+
     MediaPlayerHelper updateCover(String url) {
         if (service == null) return instance;
         if (url.contains("http")) {
             new Thread(() -> {
                 Bitmap bitmap = getBitmapFromUrl(url);
-                service.updateCover(bitmap);
+                if (bitmap != null) {
+                    service.updateCover(bitmap);
+                } else {
+                    service.updateCover(R.drawable.ic_launcher);
+                }
             }).start();
             return instance;
         }
@@ -210,10 +234,15 @@ public class MediaPlayerHelper {
                 inputStream = am.open(url);
             }
 
-            service.updateCover(BitmapFactory.decodeStream(inputStream));
+            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+            if (bitmap != null) {
+                service.updateCover(bitmap);
+            } else {
+                service.updateCover(R.drawable.ic_launcher);
+            }
 
         } catch (IOException e) {
-            onStatusCallbackNext(CallBackState.error, e.toString());
+            service.updateCover(R.drawable.ic_launcher);
         }
         return instance;
     }
@@ -361,6 +390,7 @@ public class MediaPlayerHelper {
     void play() {
         if (!canPlay()) return;
         if (isPlaying()) return;
+        requestAudioFocus();
         uiHolder.player.start();
         onStatusCallbackNext(CallBackState.playOrPause, isPlaying());
 
@@ -371,6 +401,7 @@ public class MediaPlayerHelper {
     void pause() {
         if (!canPlay()) return;
         if (!isPlaying()) return;
+        abandonAudioFocus();
         uiHolder.player.pause();
         onStatusCallbackNext(CallBackState.playOrPause, isPlaying());
 
@@ -381,8 +412,10 @@ public class MediaPlayerHelper {
     void playOrPause() {
         if (!canPlay()) return;
         if (isPlaying()) {
+            abandonAudioFocus();
             uiHolder.player.pause();
         } else {
+            requestAudioFocus();
             uiHolder.player.start();
         }
         onStatusCallbackNext(CallBackState.playOrPause, isPlaying());
@@ -420,10 +453,40 @@ public class MediaPlayerHelper {
         return true;
     }
 
+    private void requestAudioFocus() {
+        if (audioManager == null || audioFocusGranted) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            AudioFocusRequest.Builder builder = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                    .setAudioAttributes(new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .build())
+                    .setOnAudioFocusChangeListener(audioFocusChangeListener);
+            audioFocusRequest = builder.build();
+            audioFocusGranted = audioManager.requestAudioFocus(audioFocusRequest)
+                    == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+        } else {
+            int result = audioManager.requestAudioFocus(
+                    audioFocusChangeListener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
+            audioFocusGranted = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+        }
+    }
+
+    private void abandonAudioFocus() {
+        if (audioManager == null || !audioFocusGranted) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            audioManager.abandonAudioFocusRequest(audioFocusRequest);
+        } else {
+            audioManager.abandonAudioFocus(audioFocusChangeListener);
+        }
+        audioFocusGranted = false;
+    }
+
     /**
      * 停止资源
      */
     public void stop() {
+        abandonAudioFocus();
         if (uiHolder.player != null) {
             uiHolder.player.release();
             uiHolder.player = null;
@@ -515,6 +578,13 @@ public class MediaPlayerHelper {
         }
         this.context = context;
         this.uiHolder = new Holder();
+        this.audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        this.audioFocusChangeListener = focusChange -> {
+            if (focusChange == AudioManager.AUDIOFOCUS_LOSS
+                    || focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
+                pause();
+            }
+        };
         MediaPlayerService.registerReceiver(context);
 //        uiHolder.player = new MediaPlayer();
 //        keepAlive();
@@ -550,6 +620,7 @@ public class MediaPlayerHelper {
                 }
                 isPrepare = true;
                 if (mediaInfo.isAuto) {
+                    requestAudioFocus();
                     uiHolder.player.start();
                 }
                 refress_time_handler.postDelayed(refress_time_Thread, delaySecondTime);
@@ -713,10 +784,7 @@ public class MediaPlayerHelper {
             is.close();
             return bitmap;
         } catch (IOException e) {
-            Message msg = new Message();
-            msg.what = ERROR;
-            msg.obj = e.toString();
-            refress_time_handler.sendMessage(msg);
+            Log.w(TAG, "Failed to load cover: " + urlString, e);
         }
         return null;
     }
