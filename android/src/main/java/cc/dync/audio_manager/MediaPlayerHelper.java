@@ -208,6 +208,20 @@ public class MediaPlayerHelper {
         return instance;
     }
 
+    /**
+     * 使用当前播放状态重发一次通知。
+     * 用于 POST_NOTIFICATIONS 运行时授权刚被授予的场景：
+     * 申请权限前那次 notify() 会被系统静默丢弃，卡片不会自动出现。
+     */
+    MediaPlayerHelper refreshNotification() {
+        if (service != null) {
+            service.updateNotification(isPlaying(),
+                    mediaInfo != null ? mediaInfo.title : "",
+                    mediaInfo != null ? mediaInfo.desc : "");
+        }
+        return instance;
+    }
+
     MediaPlayerHelper updateInfo(String title, String desc, String cover,
                                  int titleMaxLines, boolean showPreviousButton,
                                  boolean showNextButton, boolean showStopButton) {

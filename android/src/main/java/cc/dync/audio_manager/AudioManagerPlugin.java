@@ -1,14 +1,22 @@
 package cc.dync.audio_manager;
 
+import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.core.app.NotificationManagerCompat;
+import androidx.core.content.ContextCompat;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.embedding.engine.plugins.activity.ActivityAware;
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
@@ -17,13 +25,16 @@ import io.flutter.plugin.common.MethodChannel.Result;
 /**
  * AudioManagerPlugin
  */
-public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, VolumeChangeObserver.VolumeChangeListener {
+public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, ActivityAware, VolumeChangeObserver.VolumeChangeListener {
 
     private static AudioManagerPlugin instance;
     private Context context;
     private MethodChannel channel;
     private MediaPlayerHelper helper;
     private VolumeChangeObserver volumeChangeObserver;
+
+    private Activity activity;
+    private static final int REQUEST_NOTIFICATION_PERMISSION = 1001;
 
     private static FlutterAssets flutterAssets;
 
@@ -47,6 +58,63 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
         channel.setMethodCallHandler(getInstance());
         setup(flutterPluginBinding.getApplicationContext(), channel);
         AudioManagerPlugin.flutterAssets = flutterPluginBinding.getFlutterAssets();
+    }
+
+    @Override
+    public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
+        instance.activity = binding.getActivity();
+        // 用户授予 POST_NOTIFICATIONS 后立刻重发通知卡片：
+        // 申请权限前服务的那次 notify() 会被系统静默丢弃，卡片不会自动出现。
+        binding.addRequestPermissionsResultListener((requestCode, permissions, grantResults) -> {
+            if (requestCode == REQUEST_NOTIFICATION_PERMISSION
+                    && grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                    && instance.helper != null) {
+                instance.helper.refreshNotification();
+            }
+            return true;
+        });
+    }
+
+    @Override
+    public void onDetachedFromActivityForConfigChanges() {
+        instance.activity = null;
+    }
+
+    @Override
+    public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding binding) {
+        instance.activity = binding.getActivity();
+    }
+
+    @Override
+    public void onDetachedFromActivity() {
+        instance.activity = null;
+    }
+
+    /**
+     * Android 13+（API 33）起 POST_NOTIFICATIONS 属于运行时权限。
+     * 前台媒体服务缺少它时仍可运行，但通知卡片会被系统静默丢弃，
+     * 因此播放前检测到未授权则发起一次申请（已授权或全局关闭通知时跳过）。
+     */
+    private void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return;
+        }
+        Activity currentActivity = instance.activity;
+        if (currentActivity == null) {
+            return;
+        }
+        if (!NotificationManagerCompat.from(currentActivity).areNotificationsEnabled()) {
+            return;
+        }
+        if (ContextCompat.checkSelfPermission(
+                currentActivity, Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        currentActivity.requestPermissions(
+                new String[] {Manifest.permission.POST_NOTIFICATIONS},
+                REQUEST_NOTIFICATION_PERMISSION);
     }
 
     private void setup(Context context, MethodChannel channel) {
@@ -111,6 +179,28 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
                 case stop:
                     invokeMethod("stop", null);
                     break;
+                // 视频/SurfaceView 相关回调：纯音频播放不使用，仅作日志
+                case FORMAT_NOT_SUPPORT:
+                    Log.v(TAG, "格式不支持:" + args[0]);
+                    break;
+                case INFO:
+                    Log.v(TAG, "播放开始");
+                    break;
+                case VIDEO_SIZE_CHANGE:
+                    Log.v(TAG, "视频尺寸变化");
+                    break;
+                case SURFACE_CREATE:
+                    Log.v(TAG, "SurfaceView 创建");
+                    break;
+                case SURFACE_DESTROY:
+                    Log.v(TAG, "SurfaceView 销毁");
+                    break;
+                case SURFACE_CHANGE:
+                    Log.v(TAG, "SurfaceView 改变");
+                    break;
+                case SURFACE_NULL:
+                    Log.v(TAG, "SurfaceView 未初始化");
+                    break;
             }
         });
     }
@@ -168,6 +258,9 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
                         }
                     }
                 }
+
+                // Android 13+ 需要 POST_NOTIFICATIONS 运行时授权才能展示通知卡片
+                requestNotificationPermissionIfNeeded();
 
                 try {
                     helper.start(info);
