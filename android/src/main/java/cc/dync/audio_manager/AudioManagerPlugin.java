@@ -76,7 +76,7 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
                     if (args.length == 0) return;
                     Log.v(TAG, "网络缓冲:" + args[1] + "%");
 
-                    Map map = new HashMap();
+                    Map<String, Object> map = new HashMap<>();
                     map.put("buffering", !helper.isPlaying());
                     map.put("buffer", args[1]);
                     invokeMethod("buffering", map);
@@ -89,7 +89,7 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
                     if (args.length == 0) return;
                     Log.v(TAG, "进度:" + args[0] + "%");
 
-                    Map map2 = new HashMap();
+                    Map<String, Object> map2 = new HashMap<>();
                     map2.put("position", helper.position());
                     map2.put("duration", helper.duration());
                     invokeMethod("timeupdate", map2);
@@ -189,6 +189,7 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
                 break;
             case "stop":
                 helper.stop();
+                break;
             case "release":
                 helper.release();
                 break;
