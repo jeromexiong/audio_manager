@@ -117,7 +117,8 @@ class _TrackList extends StatelessWidget {
       separatorBuilder: (context, index) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final track = tracks[index];
-        final selected = index == controller.currentIndex;
+        // 与播放卡片(currentTrack)严格一致，避免 currentIndex 越界时列表高亮与卡片不同步
+        final selected = identical(track, controller.currentTrack);
         return ListTile(
           selected: selected,
           leading: _CoverImage(track: track, size: 44),

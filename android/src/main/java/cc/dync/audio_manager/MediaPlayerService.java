@@ -53,6 +53,7 @@ public class MediaPlayerService extends Service {
         if (mediaSession != null) {
             mediaSession.setActive(false);
             mediaSession.release();
+            mediaSession = null; // 幂等：unBind 手动调用 + 系统回调可能各触发一次
         }
         // API 33+ 使用带标志位的新版，旧版 stopForeground(boolean) 保留兜底
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -68,6 +69,29 @@ public class MediaPlayerService extends Service {
     public void onCreate() {
         super.onCreate();
         setupNotification();
+    }
+
+    /**
+     * 用户从最近任务上滑移除应用时调用。
+     * 前台服务的默认行为是继续运行、通知继续显示；
+     * 这里显式停止播放、移除通知并停止服务，避免"正在播放"卡片残留。
+     */
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        super.onTaskRemoved(rootIntent);
+        // release() 内部会 stop() 停止播放 + unBind() 解除绑定（触发 onDestroy 清理通知/前台）
+        // 并释放 wifi 锁；不依赖事件回调链（任务移除时进程即将销毁，回调链不可靠）
+        MediaPlayerHelper.getInstance(getApplicationContext()).release();
+        // 兜底：万一未走 unBind->onDestroy，这里显式移除通知并停止前台
+        if (notificationManager != null)
+            notificationManager.cancel(NOTIFICATION_PENDING_ID);
+        // API 33+ 使用带标志位的新版，旧版 stopForeground(boolean) 保留兜底
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            stopForeground(STOP_FOREGROUND_REMOVE);
+        } else {
+            stopForeground(true);
+        }
+        stopSelf();
     }
 
     // 定义Binder类-当然也可以写成外部类
@@ -99,6 +123,13 @@ public class MediaPlayerService extends Service {
 
         if (!MediaPlayerService.isBindService) {
             Intent intent = new Intent(context, MediaPlayerService.class);
+            // 先以 started service 方式启动，确保 onTaskRemoved 能被回调
+            // （仅 bindService 的 bound-only 服务收不到任务移除回调，导致上滑删除后音乐与通知残留）
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent);
+            } else {
+                context.startService(intent);
+            }
             /*
              * Service：Service的桥梁
              * ServiceConnection：处理链接状态

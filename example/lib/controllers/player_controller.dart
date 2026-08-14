@@ -25,7 +25,7 @@ class PlayerController extends ChangeNotifier {
   DemoTrack? get currentTrack {
     if (tracks.isEmpty) return null;
     final index = currentIndex.clamp(0, tracks.length - 1);
-    return tracks[index];
+    return tracks[index.toInt()];
   }
 
   Future<void> init() async {
@@ -46,7 +46,14 @@ class PlayerController extends ChangeNotifier {
         url:
             'https://raw.githubusercontent.com/jeromexiong/audio_manager/master/example/assets/aLIEz.m4a',
         title: 'Network',
-        subtitle: 'network playback',
+        subtitle: 'network playback (global)',
+        coverUrl: 'https://picsum.photos/300/300',
+      ), // jsDelivr CDN（国内有加速节点，适合中国大陆访问）
+      const DemoTrack(
+        url:
+            'https://cdn.jsdelivr.net/gh/jeromexiong/audio_manager@master/example/assets/aLIEz.m4a',
+        title: 'Network (jsDelivr)',
+        subtitle: 'jsDelivr CDN for China',
         coverUrl: 'https://picsum.photos/300/300',
       ),
     ]);
@@ -104,6 +111,8 @@ class PlayerController extends ChangeNotifier {
 
     switch (events) {
       case AudioManagerEvents.start:
+        // 切歌点：立即同步当前曲目索引，避免列表/卡片停留旧状态
+        currentIndex = AudioManager.instance.curIndex;
         isLoading = true;
         error = '';
         break;
@@ -116,7 +125,14 @@ class PlayerController extends ChangeNotifier {
         _syncFromManager();
         break;
       case AudioManagerEvents.playstatus:
+        // 原生端（通知栏/锁屏/控制中心）播放或暂停时同步索引与播放状态
+        currentIndex = AudioManager.instance.curIndex;
         isPlaying = AudioManager.instance.isPlaying;
+        break;
+      case AudioManagerEvents.next:
+      case AudioManagerEvents.previous:
+        // 原生端触发上一首/下一首时同步索引
+        currentIndex = AudioManager.instance.curIndex;
         break;
       case AudioManagerEvents.timeupdate:
         position = AudioManager.instance.position;

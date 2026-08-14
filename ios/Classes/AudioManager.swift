@@ -388,6 +388,33 @@ public extension AudioManager {
     func registerBackground(){
         NotificationCenter.default.addObserver(self, selector: #selector(handleRouteChange(_:)), name: AVAudioSession.routeChangeNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(audioSessionInterrupted(_:)), name: AVAudioSession.interruptionNotification, object: nil)
+        // 应用被终止/场景断开时清除通知中心与控制中心的播放信息
+        NotificationCenter.default.addObserver(self, selector: #selector(appWillTerminate),
+                                               name: UIApplication.willTerminateNotification, object: nil)
+        if #available(iOS 13.0, *) {
+            NotificationCenter.default.addObserver(self, selector: #selector(appWillTerminate),
+                                                   name: UIScene.didDisconnectNotification, object: nil)
+        }
+    }
+
+    /// 应用被终止（含 UIScene 场景断开）时清除锁屏/控制中心的播放信息，
+    /// 避免"正在播放"卡片残留在通知中心
+    @objc func appWillTerminate() {
+        // 终止阶段不应再向 Flutter 触发事件，直接清理本地状态
+        if let observer = timeObserver {
+            timeObserver = nil
+            queue.removeTimeObserver(observer)
+        }
+        queue.removeAllItems()
+        _playingMusic.removeAll()
+        playing = false
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+        // 停用音频会话，使系统不再认为有活跃播放
+        do {
+            try session.setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            print("AudioManager: failed to deactivate session on terminate: \(error)")
+        }
     }
 
     /// 应用回到前台时同步状态
