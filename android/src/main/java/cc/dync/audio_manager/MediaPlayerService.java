@@ -43,6 +43,7 @@ public class MediaPlayerService extends Service {
         return serviceBinder;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -53,7 +54,12 @@ public class MediaPlayerService extends Service {
             mediaSession.setActive(false);
             mediaSession.release();
         }
-        stopForeground(true);
+        // API 33+ 使用带标志位的新版，旧版 stopForeground(boolean) 保留兜底
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            stopForeground(STOP_FOREGROUND_REMOVE);
+        } else {
+            stopForeground(true);
+        }
         // 停止服务
         stopSelf();
     }
@@ -198,6 +204,7 @@ public class MediaPlayerService extends Service {
     private boolean showPreviousButton = false;
     private boolean showNextButton = true;
     private boolean showStopButton = true;
+    private Bitmap coverBitmap;
 
     private void setupNotification() {
         Intent contentIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
@@ -208,8 +215,8 @@ public class MediaPlayerService extends Service {
         contentPendingIntent = PendingIntent.getActivity(this, CONTENT_PENDING_REQUESTS, contentIntent, contentFlags);
 
         mediaSession = new MediaSessionCompat(this, "audio_manager");
-        mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS
-                | MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
+        // 已设置 MediaSessionCompat.Callback 处理媒体按钮与传输控制，
+        // FLAG_HANDLES_MEDIA_BUTTONS / FLAG_HANDLES_TRANSPORT_CONTROLS 已废弃且不再需要
         mediaSession.setCallback(new MediaSessionCompat.Callback() {
             @Override
             public void onPlay() {
@@ -313,6 +320,7 @@ public class MediaPlayerService extends Service {
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher)
+                .setLargeIcon(coverBitmap)
                 .setContentTitle(title)
                 .setContentText(desc)
                 .setAutoCancel(false)
@@ -367,13 +375,23 @@ public class MediaPlayerService extends Service {
     }
 
     private void updateSessionState(boolean isPlaying) {
-        if (mediaSession == null) return;
-        MediaMetadataCompat metadata = new MediaMetadataCompat.Builder()
-                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentTitle)
-                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentDesc)
-                .build();
-        mediaSession.setMetadata(metadata);
+        updateSessionMetadata(currentTitle, currentDesc, coverBitmap);
+        updateSessionPlaybackState(isPlaying);
+    }
 
+    private void updateSessionMetadata(String title, String desc, Bitmap bitmap) {
+        if (mediaSession == null) return;
+        MediaMetadataCompat.Builder metadataBuilder = new MediaMetadataCompat.Builder()
+                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
+                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, desc);
+        if (bitmap != null) {
+            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, bitmap);
+        }
+        mediaSession.setMetadata(metadataBuilder.build());
+    }
+
+    private void updateSessionPlaybackState(boolean isPlaying) {
+        if (mediaSession == null) return;
         PlaybackStateCompat state = new PlaybackStateCompat.Builder()
                 .setActions(PlaybackStateCompat.ACTION_PLAY
                         | PlaybackStateCompat.ACTION_PAUSE
@@ -389,13 +407,17 @@ public class MediaPlayerService extends Service {
     }
 
     void updateCover(Bitmap bitmap) {
+        coverBitmap = bitmap;
         views.setImageViewBitmap(R.id.image, bitmap);
         refreshNotification(currentPlaying, currentTitle, currentDesc);
+        updateSessionMetadata(currentTitle, currentDesc, bitmap);
     }
 
     void updateCover(int srcId) {
+        coverBitmap = null;
         views.setImageViewResource(R.id.image, srcId);
         refreshNotification(currentPlaying, currentTitle, currentDesc);
+        updateSessionMetadata(currentTitle, currentDesc, null);
     }
 
     // 更新Notification

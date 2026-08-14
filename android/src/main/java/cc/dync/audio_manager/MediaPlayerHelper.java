@@ -13,6 +13,7 @@ import android.media.MediaPlayer;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.os.PowerManager;
 import android.util.Log;
@@ -485,6 +486,8 @@ public class MediaPlayerHelper {
         return true;
     }
 
+    // 低于 Android 8.0 只能使用已废弃的音频焦点 API，保留兜底
+    @SuppressWarnings("deprecation")
     private void requestAudioFocus() {
         if (audioManager == null || audioFocusGranted) return;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -504,6 +507,7 @@ public class MediaPlayerHelper {
         }
     }
 
+    @SuppressWarnings("deprecation")
     private void abandonAudioFocus() {
         if (audioManager == null || !audioFocusGranted) return;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -761,6 +765,9 @@ public class MediaPlayerHelper {
         return true;
     }
 
+    // API 29 起旧的 WifiLock 模式全部废弃，且仅 WIFI_MODE_FULL_LOW_LATENCY 可作替代；
+    // Android 10 以下没有非废弃模式，保留兜底
+    @SuppressWarnings("deprecation")
     private void keepAlive() {
         // 设置设备进入锁状态模式-可在后台播放或者缓冲音乐-CPU一直工作
         uiHolder.player.setWakeMode(context, PowerManager.PARTIAL_WAKE_LOCK);
@@ -768,15 +775,21 @@ public class MediaPlayerHelper {
 //        player.setScreenOnWhilePlaying(true);
 
         // 如果你使用wifi播放流媒体，你还需要持有wifi锁
-        wifiLock = ((WifiManager) Objects.requireNonNull(context.getApplicationContext().getSystemService(Context.WIFI_SERVICE)))
-                .createWifiLock(WifiManager.WIFI_MODE_FULL, "wifilock");
+        // WIFI_MODE_FULL 已在 API 29 废弃，改用推荐的替代模式
+        WifiManager wifiManager = (WifiManager) Objects.requireNonNull(
+                context.getApplicationContext().getSystemService(Context.WIFI_SERVICE));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_LOW_LATENCY, "wifilock");
+        } else {
+            wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "wifilock");
+        }
         wifiLock.acquire();
     }
 
     /**
      * 播放进度定时器
      */
-    private Handler refress_time_handler = new Handler(){
+    private Handler refress_time_handler = new Handler(Looper.getMainLooper()){
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what){
