@@ -80,6 +80,10 @@ public class MediaPlayerHelper {
          * 是否是自动播放
          */
         boolean isAuto = true;
+        int titleMaxLines = 1;
+        boolean showPreviousButton = false;
+        boolean showNextButton = true;
+        boolean showStopButton = true;
 
         MediaInfo(String title, String url) {
             this.title = title;
@@ -165,6 +169,11 @@ public class MediaPlayerHelper {
             switch (events) {
                 case binder:
                     service = (MediaPlayerService) args[0];
+                    service.updateNotificationConfig(
+                            mediaInfo.titleMaxLines,
+                            mediaInfo.showPreviousButton,
+                            mediaInfo.showNextButton,
+                            mediaInfo.showStopButton);
                     service.updateNotification(isPlaying(), mediaInfo.title, mediaInfo.desc);
                     if (mediaInfo.cover != null) {
                         updateCover(mediaInfo.cover);
@@ -198,14 +207,21 @@ public class MediaPlayerHelper {
         return instance;
     }
 
-    MediaPlayerHelper updateInfo(String title, String desc, String cover) {
+    MediaPlayerHelper updateInfo(String title, String desc, String cover,
+                                 int titleMaxLines, boolean showPreviousButton,
+                                 boolean showNextButton, boolean showStopButton) {
         if (title != null) mediaInfo.title = title;
         if (desc != null) mediaInfo.desc = desc;
+        mediaInfo.titleMaxLines = titleMaxLines;
+        mediaInfo.showPreviousButton = showPreviousButton;
+        mediaInfo.showNextButton = showNextButton;
+        mediaInfo.showStopButton = showStopButton;
         if (cover != null) {
             mediaInfo.cover = cover;
             updateCover(mediaInfo.cover);
         }
         if (service != null) {
+            service.updateNotificationConfig(titleMaxLines, showPreviousButton, showNextButton, showStopButton);
             service.updateNotification(isPlaying(), mediaInfo.title, mediaInfo.desc);
         }
         return instance;
@@ -435,6 +451,22 @@ public class MediaPlayerHelper {
     boolean isPlaying() {
         if (uiHolder.player == null) return false;
         return uiHolder.player.isPlaying();
+    }
+
+    String getTitle() {
+        return mediaInfo.title;
+    }
+
+    String getDesc() {
+        return mediaInfo.desc;
+    }
+
+    String getCover() {
+        return mediaInfo.cover;
+    }
+
+    String getUrl() {
+        return mediaInfo.url;
     }
 
     int position() {

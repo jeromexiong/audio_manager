@@ -72,7 +72,20 @@ await AudioManager.instance.updateInfo(
   title: "new title",
   desc: "new artist",
   coverUrl: "https://example.com/new-cover.png",
+  titleMaxLines: 2,
+  showPreviousButton: true,
+  showStopButton: false,
 );
 ```
 
 Playback speed is supported through `AudioManager.instance.setRate(AudioRate.rate150)`.
+
+## Query state from background handlers
+
+Firebase background isolates cannot reliably receive `AudioManager.onEvents`. For short-lived checks, query the native state directly:
+
+```dart
+final state = await AudioManager.instance.currentState();
+print(state["isPlaying"]);
+print(state["title"]);
+```

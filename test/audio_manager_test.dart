@@ -7,13 +7,24 @@ void main() {
 
   TestWidgetsFlutterBinding.ensureInitialized();
   final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  var startResponse = '';
 
   setUp(() {
     messenger.setMockMethodCallHandler(channel, (MethodCall methodCall) async {
       if (methodCall.method == 'getPlatformVersion') return '42';
       if (methodCall.method == 'currentVolume') return 0.5;
-      if (methodCall.method == 'start') return '';
+      if (methodCall.method == 'start') return startResponse;
       if (methodCall.method == 'updateInfo') return '';
+      if (methodCall.method == 'getState') {
+        return {
+          'isPlaying': false,
+          'position': 1,
+          'duration': 10,
+          'title': 'state title',
+          'desc': 'state desc',
+          'url': 'state url',
+        };
+      }
       return null;
     });
   });
@@ -59,11 +70,41 @@ void main() {
       title: 'new',
       desc: 'new desc',
       coverUrl: 'new cover',
+      titleMaxLines: 2,
+      showPreviousButton: true,
+      showStopButton: false,
     );
 
     expect(result, '');
     expect(manager.info!.title, 'new');
     expect(manager.info!.desc, 'new desc');
     expect(manager.info!.coverUrl, 'new cover');
+    expect(manager.info!.titleMaxLines, 2);
+    expect(manager.info!.showPreviousButton, isTrue);
+    expect(manager.info!.showStopButton, isFalse);
+  });
+
+  test('start surfaces native error and clears loading state', () async {
+    startResponse = 'bad url';
+    addTearDown(() => startResponse = '');
+
+    final manager = AudioManager.instance;
+    manager.nextMode(playMode: PlayMode.sequence);
+    manager.audioList = [
+      AudioInfo('url', title: 'title', desc: 'desc', coverUrl: 'cover'),
+    ];
+
+    final result = await manager.play(index: 0, auto: false);
+
+    expect(result, 'bad url');
+    expect(manager.error, 'bad url');
+    expect(manager.isLoading, isFalse);
+  });
+
+  test('currentState returns native state', () async {
+    final state = await AudioManager.instance.currentState();
+
+    expect(state['title'], 'state title');
+    expect(state['isPlaying'], isFalse);
   });
 }

@@ -126,6 +126,15 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
             AudioManager.default.setVolume(Float(value), show: showVolume)
         case "currentVolume":
             result(AudioManager.default.currentVolume)
+        case "getState":
+            result([
+                "isPlaying": AudioManager.default.playing,
+                "position": AudioManager.default.currentTime,
+                "duration": AudioManager.default.duration,
+                "title": AudioManager.default.title ?? "",
+                "desc": AudioManager.default.desc ?? "",
+                "url": AudioManager.default.url ?? "",
+            ])
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -162,6 +171,10 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
     public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable : Any] = [:]) -> Bool {
         AudioManager.default.registerBackground()
         return true
+    }
+
+    public func applicationDidBecomeActive(_ application: UIApplication) {
+        AudioManager.default.synchronizeState()
     }
     
 //    public func applicationWillResignActive(_ application: UIApplication) {

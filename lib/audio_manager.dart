@@ -123,6 +123,7 @@ class AudioManager {
         break;
       case "error":
         _error = call.arguments;
+        _isLoading = false;
         if (_playing) _setPlaying(false);
         _onEvents(AudioManagerEvents.error, _error);
         break;
@@ -155,8 +156,9 @@ class AudioManager {
   String _preprocessing() {
     var errMsg = "";
     if (_info == null) errMsg = "you must invoke the [start] method first";
-    if (_error != null) errMsg = _error!;
-    if (_isLoading) errMsg = "audio resource loading....";
+    if (_error != null && _error!.isNotEmpty) errMsg = _error!;
+    if (_isLoading && (_error == null || _error!.isEmpty))
+      errMsg = "audio resource loading....";
 
     if (errMsg.isNotEmpty) _onEvents(AudioManagerEvents.error, errMsg);
     return errMsg;
@@ -189,13 +191,26 @@ class AudioManager {
   /// `desc`: Notification details; `cover`: cover image address, `network` address, or `asset` address;
   /// `auto`: Whether to play automatically, default is true;
   Future<String> start(String url, String title,
-      {required String desc, required String cover, bool? auto}) async {
+      {required String desc,
+      required String cover,
+      bool? auto,
+      int titleMaxLines = 1,
+      bool showPreviousButton = false,
+      bool showNextButton = true,
+      bool showStopButton = true}) async {
     if (url.isEmpty) return "[url] can not be null or empty";
     if (title.isEmpty) return "[title] can not be null or empty";
     cover = cover;
     desc = desc;
 
-    _info = AudioInfo(url, title: title, desc: desc, coverUrl: cover);
+    _info = AudioInfo(url,
+        title: title,
+        desc: desc,
+        coverUrl: cover,
+        titleMaxLines: titleMaxLines,
+        showPreviousButton: showPreviousButton,
+        showNextButton: showNextButton,
+        showStopButton: showStopButton);
     _audioList.insert(0, _info!);
     return await play(index: 0, auto: auto);
   }
@@ -210,7 +225,12 @@ class AudioManager {
 
   Future<String> startInfo(AudioInfo audio, {required bool auto}) async {
     return await start(audio.url, audio.title,
-        desc: audio.desc, cover: audio.coverUrl);
+        desc: audio.desc,
+        cover: audio.coverUrl,
+        titleMaxLines: audio.titleMaxLines,
+        showPreviousButton: audio.showPreviousButton,
+        showNextButton: audio.showNextButton,
+        showStopButton: audio.showStopButton);
   }
 
   /// Play specified subscript audio if you want
@@ -252,8 +272,17 @@ class AudioManager {
       "isAuto": _auto,
       "isLocal": !regx.hasMatch(_info!.url),
       "isLocalCover": !regx.hasMatch(_info!.coverUrl),
+      "titleMaxLines": _info!.titleMaxLines,
+      "showPreviousButton": _info!.showPreviousButton,
+      "showNextButton": _info!.showNextButton,
+      "showStopButton": _info!.showStopButton,
     });
-    return result;
+    if (result is String && result.isNotEmpty) {
+      _isLoading = false;
+      _error = result;
+      _onEvents(AudioManagerEvents.error, result);
+    }
+    return result ?? "";
   }
 
   /// Play or pause; that is, pause if currently playing, otherwise play
@@ -341,15 +370,30 @@ class AudioManager {
 
   /// Update notification/remote-control metadata without restarting playback.
   Future<String> updateInfo(
-      {String? title, String? desc, String? coverUrl}) async {
+      {String? title,
+      String? desc,
+      String? coverUrl,
+      int? titleMaxLines,
+      bool? showPreviousButton,
+      bool? showNextButton,
+      bool? showStopButton}) async {
     if (_preprocessing().isNotEmpty) return _preprocessing();
     final AudioInfo current = _info!;
     final String newTitle = title ?? current.title;
     final String newDesc = desc ?? current.desc;
     final String newCover = coverUrl ?? current.coverUrl;
+    final int newTitleMaxLines = titleMaxLines ?? current.titleMaxLines;
+    final bool newShowPreviousButton =
+        showPreviousButton ?? current.showPreviousButton;
+    final bool newShowNextButton = showNextButton ?? current.showNextButton;
+    final bool newShowStopButton = showStopButton ?? current.showStopButton;
     current.title = newTitle;
     current.desc = newDesc;
     current.coverUrl = newCover;
+    current.titleMaxLines = newTitleMaxLines;
+    current.showPreviousButton = newShowPreviousButton;
+    current.showNextButton = newShowNextButton;
+    current.showStopButton = newShowStopButton;
 
     final regx = new RegExp(r'^(http|https|file):\/\/\/?([\w.]+\/?)\S*');
     final result = await _channel.invokeMethod("updateInfo", {
@@ -357,6 +401,10 @@ class AudioManager {
       "desc": newDesc,
       "cover": newCover,
       "isLocalCover": !regx.hasMatch(newCover),
+      "titleMaxLines": newTitleMaxLines,
+      "showPreviousButton": newShowPreviousButton,
+      "showNextButton": newShowNextButton,
+      "showStopButton": newShowStopButton,
     });
     return result ?? "";
   }
@@ -448,5 +496,12 @@ class AudioManager {
   Future<double> getCurrentVolume() async {
     _volume = await _channel.invokeMethod("currentVolume");
     return _volume;
+  }
+
+  /// Query the current native playback state from a non-UI context.
+  Future<Map<String, dynamic>> currentState() async {
+    final result = await _channel.invokeMethod("getState");
+    if (result is Map) return Map<String, dynamic>.from(result);
+    return <String, dynamic>{};
   }
 }
