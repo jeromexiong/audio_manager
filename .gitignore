@@ -65,6 +65,7 @@
 **/ios/Flutter/ephemeral/
 **/ios/Flutter/flutter_assets/
 **/ios/Flutter/flutter_export_environment.sh
+**/ios/Runner.xcworkspace/
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
 
