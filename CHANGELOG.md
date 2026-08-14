@@ -1,4 +1,4 @@
-## Next
+## 0.9.1
 - Support Android 12+ `PendingIntent` flags and foreground service type
 - Use `MediaSession` / `MediaStyle` for Android notification and lock-screen controls
 - Add `updateInfo` to update title, description, and cover while playing
@@ -12,6 +12,8 @@
 - Add notification title line and button visibility configuration
 - Use AVURLAsset with a User-Agent for stream URLs
 - Add `currentState` for native playback state queries
+- Refactor the example into a layered controller and screen structure
+- Use a reliable HTTPS cover in the example
 
 ### Fixed issues
 - Closes [#98](https://github.com/jeromexiong/audio_manager/issues/98), [#99](https://github.com/jeromexiong/audio_manager/issues/99), [#84](https://github.com/jeromexiong/audio_manager/issues/84)

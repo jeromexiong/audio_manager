@@ -1,0 +1,49 @@
+name: publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  verify-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require tag on master
+        run: |
+          git fetch origin master
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/master; then
+            echo "::error::Tags must point to a commit reachable from master"
+            exit 1
+          fi
+
+  publish:
+    needs: verify-tag
+    runs-on: ubuntu-latest
+    environment: pub
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter test
+      - name: Verify pub.dev credentials
+        env:
+          PUB_DEV_PUBLISH_ACCESS_TOKEN: ${{ secrets.PUB_DEV_PUBLISH_ACCESS_TOKEN }}
+          PUB_DEV_PUBLISH_REFRESH_TOKEN: ${{ secrets.PUB_DEV_PUBLISH_REFRESH_TOKEN }}
+        run: |
+          if [[ -z "$PUB_DEV_PUBLISH_ACCESS_TOKEN" || -z "$PUB_DEV_PUBLISH_REFRESH_TOKEN" ]]; then
+            echo "::error::Set PUB_DEV_PUBLISH_ACCESS_TOKEN and PUB_DEV_PUBLISH_REFRESH_TOKEN"
+            exit 1
+          fi
+      - name: Publish to pub.dev
+        env:
+          PUB_DEV_PUBLISH_ACCESS_TOKEN: ${{ secrets.PUB_DEV_PUBLISH_ACCESS_TOKEN }}
+          PUB_DEV_PUBLISH_REFRESH_TOKEN: ${{ secrets.PUB_DEV_PUBLISH_REFRESH_TOKEN }}
+        run: flutter pub publish --force
