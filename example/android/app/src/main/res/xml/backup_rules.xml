@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+   Android 11 及以下 全量备份规则：应用关闭备份，因此不包含任何数据。
+-->
+<full-backup-content>
+    <exclude domain="root" path="." />
+</full-backup-content>

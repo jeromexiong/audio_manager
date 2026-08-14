@@ -8,6 +8,8 @@
          FlutterApplication and put your custom class here. -->
     <application
         android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:usesCleartextTraffic="true"
         android:label="audio_manager_example"
         android:icon="@mipmap/ic_launcher">
