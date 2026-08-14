@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.pm.ServiceInfo;
 import android.graphics.Bitmap;
 import android.os.Binder;
 import android.os.Build;
@@ -96,7 +97,6 @@ public class MediaPlayerService extends Service {
     /// 通知事件处理，只能加载一次，否则会重复
     public static void registerReceiver(Context context) {
         MediaPlayerService.context = context;
-        // 注册广播
         BroadcastReceiver playerReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -122,7 +122,11 @@ public class MediaPlayerService extends Service {
         intentFilter.addAction(ACTION_PREVIOUS);
         intentFilter.addAction(ACTION_PLAY_OR_PAUSE);
         intentFilter.addAction(ACTION_STOP);
-        context.registerReceiver(playerReceiver, intentFilter);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(playerReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            context.registerReceiver(playerReceiver, intentFilter);
+        }
     }
 
     // 解除绑定
@@ -171,26 +175,35 @@ public class MediaPlayerService extends Service {
     private RemoteViews views;
 
     private void setupNotification() {
-        // 设置点击通知结果
-//        Intent intent = new Intent("android.flutter.audio_manager.activity");
-        Intent intent = new Intent(this, AudioManagerPlugin.class);
-        PendingIntent contentPendingIntent = PendingIntent.getActivity(this, CONTENT_PENDING_REQUESTS, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        Intent contentIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+        if (contentIntent == null) {
+            contentIntent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+        }
+        int contentFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            contentFlags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        PendingIntent contentPendingIntent = PendingIntent.getActivity(this, CONTENT_PENDING_REQUESTS, contentIntent, contentFlags);
 
         // 自定义布局
         views = new RemoteViews(getPackageName(), R.layout.layout_mediaplayer);
+        int broadcastFlags = PendingIntent.FLAG_CANCEL_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            broadcastFlags |= PendingIntent.FLAG_IMMUTABLE;
+        }
         // 下一首
-        Intent intentNext = new Intent(ACTION_NEXT);
-        PendingIntent nextPendingIntent = PendingIntent.getBroadcast(this, NEXT_PENDING_REQUESTS, intentNext, PendingIntent.FLAG_CANCEL_CURRENT);
+        Intent intentNext = new Intent(ACTION_NEXT).setPackage(getPackageName());
+        PendingIntent nextPendingIntent = PendingIntent.getBroadcast(this, NEXT_PENDING_REQUESTS, intentNext, broadcastFlags);
         views.setOnClickPendingIntent(R.id.iv_next, nextPendingIntent);
 
         // 暂停/播放
-        Intent intentPlay = new Intent(ACTION_PLAY_OR_PAUSE);
-        PendingIntent playPendingIntent = PendingIntent.getBroadcast(this, PLAY_PENDING_REQUESTS, intentPlay, PendingIntent.FLAG_CANCEL_CURRENT);
+        Intent intentPlay = new Intent(ACTION_PLAY_OR_PAUSE).setPackage(getPackageName());
+        PendingIntent playPendingIntent = PendingIntent.getBroadcast(this, PLAY_PENDING_REQUESTS, intentPlay, broadcastFlags);
         views.setOnClickPendingIntent(R.id.iv_pause, playPendingIntent);
 
         // 停止
-        Intent intentStop = new Intent(ACTION_STOP);
-        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(this, STOP_PENDING_REQUESTS, intentStop, PendingIntent.FLAG_CANCEL_CURRENT);
+        Intent intentStop = new Intent(ACTION_STOP).setPackage(getPackageName());
+        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(this, STOP_PENDING_REQUESTS, intentStop, broadcastFlags);
         views.setOnClickPendingIntent(R.id.iv_cancel, stopPendingIntent);
 
         builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
@@ -219,7 +232,11 @@ public class MediaPlayerService extends Service {
         }
 
         // 前台服务
-        startForeground(NOTIFICATION_PENDING_ID, builder.build());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(NOTIFICATION_PENDING_ID, builder.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        } else {
+            startForeground(NOTIFICATION_PENDING_ID, builder.build());
+        }
     }
 
     void updateCover(Bitmap bitmap) {
