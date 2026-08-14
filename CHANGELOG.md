@@ -1,3 +1,14 @@
+## 0.9.2
+- Rebuild the web implementation on `package:web` (`HTMLAudioElement`), fixing the runtime crash, adding event forwarding, and resolving local assets in release builds
+- Request the Android 13+ `POST_NOTIFICATIONS` permission at runtime and re-post the playback card once granted
+- Fix pause being ineffective, volume not syncing, and notification display on iOS; migrate to the `UIScene` lifecycle
+- Fix the notification cover not showing and `stop` leaking through release builds on Android
+- Clear the leftover playback card when the app exits and sync the track index on switch
+- Fix `timeupdate` clearing the error state and clamp `setVolume` arguments
+- Upgrade the Android build toolchain and align the example's compileSdk/targetSdk with data backup rules
+- Refactor the example into a layered controller-and-screen structure
+- Use a reliable HTTPS cover in the example and add CI workflows
+
 ## 0.9.1
 - Support Android 12+ `PendingIntent` flags and foreground service type
 - Use `MediaSession` / `MediaStyle` for Android notification and lock-screen controls
