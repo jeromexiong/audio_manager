@@ -1,27 +1,34 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility that Flutter provides. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:audio_manager_example/app.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:audio_manager_example/main.dart';
-
 void main() {
-  testWidgets('Verify Platform version', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(MyApp());
+  testWidgets('renders the player screen', (WidgetTester tester) async {
+    const channel = MethodChannel('audio_manager');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
-    // Verify that platform version is retrieved.
-    expect(
-      find.byWidgetPredicate(
-        (Widget widget) => widget is Text &&
-                           (widget.data ?? '').startsWith('Running on:'),
-      ),
-      findsOneWidget,
-    );
+    messenger.setMockMethodCallHandler(channel, (MethodCall call) async {
+      switch (call.method) {
+        case 'getPlatformVersion':
+          return '42';
+        case 'currentVolume':
+          return 0.5;
+        case 'start':
+          return '';
+        case 'updateInfo':
+          return '';
+        case 'getState':
+          return {'title': 'state title'};
+        default:
+          return null;
+      }
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+    await tester.pumpWidget(const AudioManagerExampleApp());
+    await tester.pump();
+
+    expect(find.text('audio_manager example'), findsOneWidget);
   });
 }
