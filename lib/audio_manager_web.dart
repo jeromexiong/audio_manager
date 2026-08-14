@@ -1,3 +1,7 @@
+// Web 端实现基于 dart:html 的 AudioElement。
+// dart:html 已标记废弃（推荐 package:web），但迁移涉及大量平台 API 改动，
+// 在此 release 分支上先抑制该废弃提示，避免 lint 报错。
+// ignore_for_file: deprecated_member_use
 import 'dart:async';
 import 'dart:html';
 
@@ -91,7 +95,6 @@ class AudioManagerPlugin {
     final MethodChannel channel = MethodChannel(
         'audio_manager',
         const StandardMethodCodec(),
-        // ignore: deprecated_member_use
         registrar.messenger);
 
     final AudioManagerPlugin instance = AudioManagerPlugin();
