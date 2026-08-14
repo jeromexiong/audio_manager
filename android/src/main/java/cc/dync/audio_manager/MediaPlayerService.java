@@ -16,6 +16,7 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.View;
 import android.widget.RemoteViews;
 
 import androidx.annotation.Nullable;
@@ -25,6 +26,8 @@ import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class MediaPlayerService extends Service {
@@ -191,6 +194,10 @@ public class MediaPlayerService extends Service {
     private String currentTitle = "";
     private String currentDesc = "";
     private boolean currentPlaying = false;
+    private int notificationTitleMaxLines = 1;
+    private boolean showPreviousButton = false;
+    private boolean showNextButton = true;
+    private boolean showStopButton = true;
 
     private void setupNotification() {
         Intent contentIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
@@ -237,6 +244,7 @@ public class MediaPlayerService extends Service {
         // 上一首
         Intent intentPrevious = new Intent(ACTION_PREVIOUS).setPackage(getPackageName());
         previousPendingIntent = PendingIntent.getBroadcast(this, PREVIOUS_PENDING_REQUESTS, intentPrevious, broadcastFlags);
+        views.setOnClickPendingIntent(R.id.iv_previous, previousPendingIntent);
 
         // 下一首
         Intent intentNext = new Intent(ACTION_NEXT).setPackage(getPackageName());
@@ -262,6 +270,7 @@ public class MediaPlayerService extends Service {
             notificationManager.createNotificationChannel(notificationChannel);
         }
 
+        applyNotificationConfig();
         refreshNotification(false, "", "");
         updateSessionState(false);
 
@@ -290,10 +299,19 @@ public class MediaPlayerService extends Service {
                 android.R.drawable.ic_menu_close_clear_cancel, "Stop", stopPendingIntent);
 
         MediaStyle mediaStyle = new MediaStyle()
-                .setMediaSession(mediaSession.getSessionToken())
-                .setShowActionsInCompactView(0, 1, 2);
+                .setMediaSession(mediaSession.getSessionToken());
+        List<NotificationCompat.Action> actions = new ArrayList<>();
+        if (showPreviousButton) actions.add(previousAction);
+        actions.add(playAction);
+        if (showNextButton) actions.add(nextAction);
+        if (showStopButton) actions.add(stopAction);
+        if (showPreviousButton) {
+            mediaStyle.setShowActionsInCompactView(0, 1, 2);
+        } else {
+            mediaStyle.setShowActionsInCompactView(0, 1);
+        }
 
-        return new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher)
                 .setContentTitle(title)
                 .setContentText(desc)
@@ -303,11 +321,32 @@ public class MediaPlayerService extends Service {
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setContentIntent(contentPendingIntent)
                 .setContent(views)
-                .setStyle(mediaStyle)
-                .addAction(previousAction)
-                .addAction(playAction)
-                .addAction(nextAction)
-                .addAction(stopAction);
+                .setStyle(mediaStyle);
+        for (NotificationCompat.Action action : actions) {
+            builder.addAction(action);
+        }
+        return builder;
+    }
+
+    void updateNotificationConfig(int titleMaxLines, boolean showPrevious,
+                                  boolean showNext, boolean showStop) {
+        notificationTitleMaxLines = Math.max(1, titleMaxLines);
+        showPreviousButton = showPrevious;
+        showNextButton = showNext;
+        showStopButton = showStop;
+        applyNotificationConfig();
+        refreshNotification(currentPlaying, currentTitle, currentDesc);
+    }
+
+    private void applyNotificationConfig() {
+        if (views == null) return;
+        views.setInt(R.id.tv_name, "setMaxLines", notificationTitleMaxLines);
+        views.setViewVisibility(R.id.iv_previous,
+                showPreviousButton ? View.VISIBLE : View.GONE);
+        views.setViewVisibility(R.id.iv_next,
+                showNextButton ? View.VISIBLE : View.GONE);
+        views.setViewVisibility(R.id.iv_cancel,
+                showStopButton ? View.VISIBLE : View.GONE);
     }
 
     private int pendingIntentFlags(int baseFlags) {

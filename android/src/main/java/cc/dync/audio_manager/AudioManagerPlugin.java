@@ -140,10 +140,19 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
                 boolean isLocal = call.hasArgument("isLocal") ? call.argument("isLocal") : false;
                 boolean isLocalCover = call.hasArgument("isLocalCover") ? call.argument("isLocalCover") : false;
                 boolean isAuto = call.hasArgument("isAuto") ? call.argument("isAuto") : false;
+                Object titleMaxLinesArg = call.argument("titleMaxLines");
+                int titleMaxLines = titleMaxLinesArg == null ? 1 : ((Number) titleMaxLinesArg).intValue();
+                boolean showPreviousButton = call.hasArgument("showPreviousButton") ? call.argument("showPreviousButton") : false;
+                boolean showNextButton = call.hasArgument("showNextButton") ? call.argument("showNextButton") : true;
+                boolean showStopButton = call.hasArgument("showStopButton") ? call.argument("showStopButton") : true;
                 MediaPlayerHelper.MediaInfo info = new MediaPlayerHelper.MediaInfo(title, url);
                 info.desc = desc;
                 info.isAsset = isLocal;
                 info.isAuto = isAuto;
+                info.titleMaxLines = titleMaxLines;
+                info.showPreviousButton = showPreviousButton;
+                info.showNextButton = showNextButton;
+                info.showStopButton = showStopButton;
                 if (isLocal) {
                     if (flutterAssets != null) {
                         info.url = AudioManagerPlugin.flutterAssets.getAssetFilePathByName(url);
@@ -195,7 +204,14 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
                     if (updateCover != null && updateIsLocalCover && flutterAssets != null && !helper.isDataDirFile(updateCover)) {
                         updateCover = flutterAssets.getAssetFilePathByName(updateCover);
                     }
-                    helper.updateInfo(updateTitle, updateDesc, updateCover);
+                    Object updateTitleMaxLinesArg = call.argument("titleMaxLines");
+                    int updateTitleMaxLines = updateTitleMaxLinesArg == null ? 1 : ((Number) updateTitleMaxLinesArg).intValue();
+                    boolean updateShowPreviousButton = call.hasArgument("showPreviousButton") ? call.argument("showPreviousButton") : false;
+                    boolean updateShowNextButton = call.hasArgument("showNextButton") ? call.argument("showNextButton") : true;
+                    boolean updateShowStopButton = call.hasArgument("showStopButton") ? call.argument("showStopButton") : true;
+                    helper.updateInfo(updateTitle, updateDesc, updateCover,
+                            updateTitleMaxLines, updateShowPreviousButton,
+                            updateShowNextButton, updateShowStopButton);
                     result.success("");
                 }
                 break;
@@ -225,6 +241,19 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
                 break;
             case "currentVolume":
                 result.success(instance.volumeChangeObserver.getCurrentMusicVolume());
+                break;
+            case "getState":
+                {
+                    Map<String, Object> state = new HashMap<>();
+                    state.put("isPlaying", helper.isPlaying());
+                    state.put("position", helper.position());
+                    state.put("duration", helper.duration());
+                    state.put("title", helper.getTitle());
+                    state.put("desc", helper.getDesc());
+                    state.put("cover", helper.getCover());
+                    state.put("url", helper.getUrl());
+                    result.success(state);
+                }
                 break;
             default:
                 result.notImplemented();

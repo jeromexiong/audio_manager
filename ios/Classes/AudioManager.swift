@@ -86,6 +86,7 @@ open class AudioManager: NSObject {
     fileprivate var observeLoaded: NSKeyValueObservation?
     fileprivate var observeBufferEmpty: NSKeyValueObservation?
     fileprivate var observeCanPlay: NSKeyValueObservation?
+    fileprivate var observeTimeControl: NSKeyValueObservation?
     
     fileprivate let session = AVAudioSession.sharedInstance()
     fileprivate var interrupterStatus = false
@@ -142,7 +143,11 @@ public extension AudioManager {
                     onError(.custom(-1, "link [\(link)] is invalid"))
                     return
                 }
-                playerItem = AVPlayerItem(url: path)
+                let options: [String: Any] = [
+                    "AVURLAssetHTTPHeaderFieldsKey": ["User-Agent": "audio_manager"]
+                ]
+                let asset = AVURLAsset(url: path, options: options)
+                playerItem = AVPlayerItem(asset: asset)
             }
             _playingMusic[link] = playerItem
             queue.replaceCurrentItem(with: playerItem)
@@ -204,7 +209,6 @@ public extension AudioManager {
     
     /// 播放▶️音乐🎵
     func play(_ link: String? = nil) {
-        if playing { return }
         guard let playerItem = _playingMusic[link ?? url ?? ""] as? AVPlayerItem, playerItem.status == .readyToPlay else {
             onError(.notReady)
             return
@@ -215,20 +219,17 @@ public extension AudioManager {
             queue.play()
             queue.rate = rate
         }
-        playing = true
-        onEvents?(.playing)
+        synchronizeState()
     }
     
     /// 暂停⏸音乐🎵
     func pause(_ link: String? = nil) {
-        if !playing { return }
         guard let _ = _playingMusic[link ?? url ?? ""] as? AVPlayerItem else {
             onError(.notReady)
             return
         }
         queue.pause()
-        playing = false
-        onEvents?(.pause)
+        synchronizeState()
     }
     
     /// 停止⏹音乐🎵
@@ -255,6 +256,16 @@ public extension AudioManager {
         _playingMusic.removeAll()
         UIApplication.shared.endReceivingRemoteControlEvents()
     }
+
+    /// 以播放器的真实状态刷新 UI 状态
+    func synchronizeState() {
+        if #available(iOS 10.0, *) {
+            updatePlayingState(queue.timeControlStatus == .playing)
+        } else {
+            updatePlayingState(queue.rate > 0)
+        }
+        setRemoteInfo()
+    }
 }
 private enum AudioError {
     case notReady
@@ -277,27 +288,7 @@ fileprivate extension AudioManager {
         return "\((#file as NSString).lastPathComponent)[\(#line)])"
     }
     func transformURLString(_ string: String) -> URLComponents? {
-        guard let urlPath = string.components(separatedBy: "?").first else {
-            return nil
-        }
-        
-        if urlPath.contains("file:") {
-            return URLComponents(url: URL(fileURLWithPath: urlPath), resolvingAgainstBaseURL: false)
-        }
-        
-        var components = URLComponents(string: urlPath)
-        if let queryString = string.components(separatedBy: "?").last {
-            components?.queryItems = []
-            let queryItems = queryString.components(separatedBy: "&")
-            for queryItem in queryItems {
-                guard let itemName = queryItem.components(separatedBy: "=").first,
-                      let itemValue = queryItem.components(separatedBy: "=").last else {
-                    continue
-                }
-                components?.queryItems?.append(URLQueryItem(name: itemName, value: itemValue))
-            }
-        }
-        return components!
+        return URLComponents(string: string)
     }
     @objc func playerFinishPlaying(_ n: Notification) {
         queue.seek(to: CMTime.zero)
@@ -317,6 +308,9 @@ fileprivate extension AudioManager {
                     self.queue.pause()
                 }
                 self.onEvents?(.ready(self.duration))
+            } else if _playerItem.status == .failed {
+                let message = _playerItem.error?.localizedDescription ?? "player item failed"
+                self.onError(.custom(-1, message))
             }else {
                 self.playing = false
             }
@@ -344,6 +338,18 @@ fileprivate extension AudioManager {
             [weak self] _playerItem, change in
             self?.buffering = false
         }
+        if #available(iOS 10.0, *) {
+            observeTimeControl = queue.observe(\.timeControlStatus, options: [.new]) {
+                [weak self] player, change in
+                self?.updatePlayingState(player.timeControlStatus == .playing)
+            }
+        }
+    }
+
+    private func updatePlayingState(_ isPlaying: Bool) {
+        if playing == isPlaying { return }
+        playing = isPlaying
+        onEvents?(isPlaying ? .playing : .pause)
     }
     /// 监听时间变化
     func observingTimeChanges() {
@@ -440,9 +446,15 @@ fileprivate extension AudioManager {
     
     /// 锁屏信息
     func updateLockInfo() {
-        guard let _ = url, playing == true else {
+        guard let _ = url else {
             return
         }
+        if #available(iOS 10.0, *) {
+            updatePlayingState(queue.timeControlStatus == .playing)
+        } else {
+            updatePlayingState(queue.rate > 0)
+        }
+        guard playing == true else { return }
         let duration = Double(CMTimeGetSeconds(queue.currentItem?.duration ?? .zero))
         let currentTime = Double(CMTimeGetSeconds(queue.currentTime()))
         if duration.isNaN || currentTime.isNaN { return }
