@@ -47,8 +47,7 @@ class PlayerController extends ChangeNotifier {
             'https://raw.githubusercontent.com/jeromexiong/audio_manager/master/example/assets/aLIEz.m4a',
         title: 'Network',
         subtitle: 'network playback',
-        coverUrl:
-            'https://raw.githubusercontent.com/jeromexiong/audio_manager/master/example/assets/aLIEz.jpg',
+        coverUrl: 'https://picsum.photos/300/300',
       ),
     ]);
 
