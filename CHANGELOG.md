@@ -7,6 +7,11 @@
 - Guard native events after Flutter engine detach
 - Request Android audio focus and avoid iOS background audio mixing
 - Migrate package and example to Dart 3
+- Surface native start errors and clear stale loading state
+- Sync iOS playback state with the real AVPlayer state
+- Add notification title line and button visibility configuration
+- Use AVURLAsset with a User-Agent for stream URLs
+- Add `currentState` for native playback state queries
 
 ### Fixed issues
 - Closes [#98](https://github.com/jeromexiong/audio_manager/issues/98), [#99](https://github.com/jeromexiong/audio_manager/issues/99), [#84](https://github.com/jeromexiong/audio_manager/issues/84)
