@@ -9,9 +9,17 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "audio_manager", binaryMessenger: registrar.messenger())
         registrar.addMethodCallDelegate(instance, channel: channel)
-        registrar.addApplicationDelegate(instance)
-        
+
         instance.registrar = registrar
+        // 后台音频和相关观察者直接注册，不再通过已废弃的 addApplicationDelegate
+        AudioManager.default.registerBackground()
+        // UIScene 模式下用 NotificationCenter 替代 applicationDidBecomeActive
+        NotificationCenter.default.addObserver(
+            AudioManager.default,
+            selector: #selector(AudioManager.appDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
         AudioManager.default.onEvents = { event in
             switch event {
             case .ready(let duration):
@@ -42,7 +50,7 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
             }
         }
     }
-    
+
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         let arguments = call.arguments as? Dictionary<String,Any> ?? [:]
         let url = arguments["url"] as? String
@@ -139,7 +147,7 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
             result(FlutterMethodNotImplemented)
         }
     }
-    
+
     func getLocal(_ registrar: FlutterPluginRegistrar, path: String) -> String? {
         let key = registrar.lookupKey(forAsset: path)
         return Bundle.main.path(forResource: key, ofType: nil)
@@ -158,37 +166,15 @@ public class SwiftAudioManagerPlugin: NSObject, FlutterPlugin {
             completion(nil)
             return
         }
-        let request = URLRequest(url: url)
-        NSURLConnection.sendAsynchronousRequest(request, queue: OperationQueue.main) { (_, data, error) in
-            if let data = data {
-                completion(UIImageView(image: UIImage(data: data)))
-            } else {
-                completion(nil)
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            DispatchQueue.main.async {
+                if let data = data {
+                    completion(UIImageView(image: UIImage(data: data)))
+                } else {
+                    completion(nil)
+                }
             }
-        }
-    }
-    
-    public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable : Any] = [:]) -> Bool {
-        AudioManager.default.registerBackground()
-        return true
+        }.resume()
     }
 
-    public func applicationDidBecomeActive(_ application: UIApplication) {
-        AudioManager.default.synchronizeState()
-    }
-    
-//    public func applicationWillResignActive(_ application: UIApplication) {
-//        backTaskId = backgroundPlayerID(backTaskId)
-//    }
-    
-    private var backTaskId: UIBackgroundTaskIdentifier = .invalid
-    /// 设置后台任务ID
-    private func backgroundPlayerID(_ backTaskId: UIBackgroundTaskIdentifier) -> UIBackgroundTaskIdentifier {
-        var taskId = UIBackgroundTaskIdentifier.invalid;
-        taskId = UIApplication.shared.beginBackgroundTask(expirationHandler: nil)
-        if taskId != .invalid && backTaskId != .invalid {
-            UIApplication.shared.endBackgroundTask(backTaskId)
-        }
-        return taskId
-    }
 }
