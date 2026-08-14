@@ -62,16 +62,15 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
 
     private void setupPlayer() {
         MediaPlayerHelper helper = instance.helper;
-        MethodChannel channel = instance.channel;
 
         helper.setOnStatusCallbackListener((status, args) -> {
             Log.v(TAG, "--" + status.toString());
             switch (status) {
                 case ready:
-                    channel.invokeMethod("ready", helper.duration());
+                    invokeMethod("ready", helper.duration());
                     break;
                 case seekComplete:
-                    channel.invokeMethod("seekComplete", helper.position());
+                    invokeMethod("seekComplete", helper.position());
                     break;
                 case buffering:
                     if (args.length == 0) return;
@@ -80,11 +79,11 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
                     Map map = new HashMap();
                     map.put("buffering", !helper.isPlaying());
                     map.put("buffer", args[1]);
-                    channel.invokeMethod("buffering", map);
+                    invokeMethod("buffering", map);
                     break;
                 case playOrPause:
                     if (args.length == 0) return;
-                    channel.invokeMethod("playstatus", args[0]);
+                    invokeMethod("playstatus", args[0]);
                     break;
                 case progress:
                     if (args.length == 0) return;
@@ -93,27 +92,34 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
                     Map map2 = new HashMap();
                     map2.put("position", helper.position());
                     map2.put("duration", helper.duration());
-                    channel.invokeMethod("timeupdate", map2);
+                    invokeMethod("timeupdate", map2);
                     break;
                 case error:
                     Log.v(TAG, "播放错误:" + args[0]);
-                    channel.invokeMethod("error", args[0]);
+                    invokeMethod("error", args[0]);
                     helper.stop();
                     break;
                 case next:
-                    channel.invokeMethod("next", null);
+                    invokeMethod("next", null);
                     break;
                 case previous:
-                    channel.invokeMethod("previous", null);
+                    invokeMethod("previous", null);
                     break;
                 case ended:
-                    channel.invokeMethod("ended", null);
+                    invokeMethod("ended", null);
                     break;
                 case stop:
-                    channel.invokeMethod("stop", null);
+                    invokeMethod("stop", null);
                     break;
             }
         });
+    }
+
+    private void invokeMethod(String method, Object args) {
+        MethodChannel channel = instance.channel;
+        if (channel != null) {
+            channel.invokeMethod(method, args);
+        }
     }
 
     private static final String TAG = "AudioManagerPlugin";
@@ -180,6 +186,19 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
             case "updateLrc":
                 helper.updateLrc(call.argument("lrc"));
                 break;
+            case "updateInfo":
+                {
+                    String updateTitle = call.argument("title");
+                    String updateDesc = call.argument("desc");
+                    String updateCover = call.argument("cover");
+                    boolean updateIsLocalCover = call.hasArgument("isLocalCover") ? call.argument("isLocalCover") : false;
+                    if (updateCover != null && updateIsLocalCover && flutterAssets != null && !helper.isDataDirFile(updateCover)) {
+                        updateCover = flutterAssets.getAssetFilePathByName(updateCover);
+                    }
+                    helper.updateInfo(updateTitle, updateDesc, updateCover);
+                    result.success("");
+                }
+                break;
             case "seekTo":
                 try {
                     int position = Integer.parseInt(call.argument("position").toString());
@@ -215,10 +234,15 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
 
     @Override
     public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
+        if (volumeChangeObserver != null) {
+            volumeChangeObserver.unregisterReceiver();
+            volumeChangeObserver = null;
+        }
+        instance.channel = null;
     }
 
     @Override
     public void onVolumeChanged(double volume) {
-        instance.channel.invokeMethod("volumeChange", volume);
+        invokeMethod("volumeChange", volume);
     }
 }

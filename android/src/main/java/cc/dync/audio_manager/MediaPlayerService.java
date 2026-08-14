@@ -20,6 +20,10 @@ import android.widget.RemoteViews;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import androidx.media.app.NotificationCompat.MediaStyle;
+import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.session.MediaSessionCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
 
 import java.util.Objects;
 
@@ -42,6 +46,10 @@ public class MediaPlayerService extends Service {
         // 取消Notification
         if (notificationManager != null)
             notificationManager.cancel(NOTIFICATION_PENDING_ID);
+        if (mediaSession != null) {
+            mediaSession.setActive(false);
+            mediaSession.release();
+        }
         stopForeground(true);
         // 停止服务
         stopSelf();
@@ -168,59 +176,82 @@ public class MediaPlayerService extends Service {
     private static final int NEXT_PENDING_REQUESTS = 1024;
     private static final int PLAY_PENDING_REQUESTS = 1025;
     private static final int STOP_PENDING_REQUESTS = 1026;
+    private static final int PREVIOUS_PENDING_REQUESTS = 1027;
     private static final int NOTIFICATION_PENDING_ID = 1;
 
     private NotificationManager notificationManager;
     private NotificationCompat.Builder builder;
     private RemoteViews views;
+    private MediaSessionCompat mediaSession;
+    private PendingIntent contentPendingIntent;
+    private PendingIntent previousPendingIntent;
+    private PendingIntent playPendingIntent;
+    private PendingIntent nextPendingIntent;
+    private PendingIntent stopPendingIntent;
+    private String currentTitle = "";
+    private String currentDesc = "";
+    private boolean currentPlaying = false;
 
     private void setupNotification() {
         Intent contentIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
         if (contentIntent == null) {
             contentIntent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
         }
-        int contentFlags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            contentFlags |= PendingIntent.FLAG_IMMUTABLE;
-        }
-        PendingIntent contentPendingIntent = PendingIntent.getActivity(this, CONTENT_PENDING_REQUESTS, contentIntent, contentFlags);
+        int contentFlags = pendingIntentFlags(PendingIntent.FLAG_UPDATE_CURRENT);
+        contentPendingIntent = PendingIntent.getActivity(this, CONTENT_PENDING_REQUESTS, contentIntent, contentFlags);
+
+        mediaSession = new MediaSessionCompat(this, "audio_manager");
+        mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS
+                | MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
+        mediaSession.setCallback(new MediaSessionCompat.Callback() {
+            @Override
+            public void onPlay() {
+                dispatchAction(ACTION_PLAY_OR_PAUSE);
+            }
+
+            @Override
+            public void onPause() {
+                dispatchAction(ACTION_PLAY_OR_PAUSE);
+            }
+
+            @Override
+            public void onSkipToNext() {
+                dispatchAction(ACTION_NEXT);
+            }
+
+            @Override
+            public void onSkipToPrevious() {
+                dispatchAction(ACTION_PREVIOUS);
+            }
+
+            @Override
+            public void onStop() {
+                dispatchAction(ACTION_STOP);
+            }
+        });
+        mediaSession.setActive(true);
 
         // 自定义布局
         views = new RemoteViews(getPackageName(), R.layout.layout_mediaplayer);
-        int broadcastFlags = PendingIntent.FLAG_CANCEL_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            broadcastFlags |= PendingIntent.FLAG_IMMUTABLE;
-        }
+        int broadcastFlags = pendingIntentFlags(PendingIntent.FLAG_CANCEL_CURRENT);
+        // 上一首
+        Intent intentPrevious = new Intent(ACTION_PREVIOUS).setPackage(getPackageName());
+        previousPendingIntent = PendingIntent.getBroadcast(this, PREVIOUS_PENDING_REQUESTS, intentPrevious, broadcastFlags);
+
         // 下一首
         Intent intentNext = new Intent(ACTION_NEXT).setPackage(getPackageName());
-        PendingIntent nextPendingIntent = PendingIntent.getBroadcast(this, NEXT_PENDING_REQUESTS, intentNext, broadcastFlags);
+        nextPendingIntent = PendingIntent.getBroadcast(this, NEXT_PENDING_REQUESTS, intentNext, broadcastFlags);
         views.setOnClickPendingIntent(R.id.iv_next, nextPendingIntent);
 
         // 暂停/播放
         Intent intentPlay = new Intent(ACTION_PLAY_OR_PAUSE).setPackage(getPackageName());
-        PendingIntent playPendingIntent = PendingIntent.getBroadcast(this, PLAY_PENDING_REQUESTS, intentPlay, broadcastFlags);
+        playPendingIntent = PendingIntent.getBroadcast(this, PLAY_PENDING_REQUESTS, intentPlay, broadcastFlags);
         views.setOnClickPendingIntent(R.id.iv_pause, playPendingIntent);
 
         // 停止
         Intent intentStop = new Intent(ACTION_STOP).setPackage(getPackageName());
-        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(this, STOP_PENDING_REQUESTS, intentStop, broadcastFlags);
+        stopPendingIntent = PendingIntent.getBroadcast(this, STOP_PENDING_REQUESTS, intentStop, broadcastFlags);
         views.setOnClickPendingIntent(R.id.iv_cancel, stopPendingIntent);
-
-        builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-                // 设置状态栏小图标
-                .setSmallIcon(R.drawable.ic_launcher)
-                // 设置标题
-                .setContentTitle("")
-                // 设置内容
-                .setContentText("")
-                // 点击通知后自动清除
-                .setAutoCancel(false)
-                // 设置点击通知效果
-                .setContentIntent(contentPendingIntent)
-                // 设置删除时候出发的动作
-//                .setDeleteIntent(delPendingIntent)
-                // 自定义视图
-                .setContent(views);
 
         // 获取NotificationManager实例
         notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -231,6 +262,9 @@ public class MediaPlayerService extends Service {
             notificationManager.createNotificationChannel(notificationChannel);
         }
 
+        refreshNotification(false, "", "");
+        updateSessionState(false);
+
         // 前台服务
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(NOTIFICATION_PENDING_ID, builder.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
@@ -239,13 +273,90 @@ public class MediaPlayerService extends Service {
         }
     }
 
+    private void dispatchAction(String action) {
+        Intent intent = new Intent(action).setPackage(getPackageName());
+        sendBroadcast(intent);
+    }
+
+    private NotificationCompat.Builder buildNotification(boolean isPlaying, String title, String desc) {
+        NotificationCompat.Action previousAction = new NotificationCompat.Action(
+                android.R.drawable.ic_media_previous, "Previous", previousPendingIntent);
+        NotificationCompat.Action playAction = new NotificationCompat.Action(
+                isPlaying ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play,
+                isPlaying ? "Pause" : "Play", playPendingIntent);
+        NotificationCompat.Action nextAction = new NotificationCompat.Action(
+                android.R.drawable.ic_media_next, "Next", nextPendingIntent);
+        NotificationCompat.Action stopAction = new NotificationCompat.Action(
+                android.R.drawable.ic_menu_close_clear_cancel, "Stop", stopPendingIntent);
+
+        MediaStyle mediaStyle = new MediaStyle()
+                .setMediaSession(mediaSession.getSessionToken())
+                .setShowActionsInCompactView(0, 1, 2);
+
+        return new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher)
+                .setContentTitle(title)
+                .setContentText(desc)
+                .setAutoCancel(false)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setContentIntent(contentPendingIntent)
+                .setContent(views)
+                .setStyle(mediaStyle)
+                .addAction(previousAction)
+                .addAction(playAction)
+                .addAction(nextAction)
+                .addAction(stopAction);
+    }
+
+    private int pendingIntentFlags(int baseFlags) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return baseFlags | PendingIntent.FLAG_IMMUTABLE;
+        }
+        return baseFlags;
+    }
+
+    private void refreshNotification(boolean isPlaying, String title, String desc) {
+        currentPlaying = isPlaying;
+        currentTitle = title;
+        currentDesc = desc;
+        builder = buildNotification(isPlaying, title, desc);
+        if (notificationManager != null) {
+            notificationManager.notify(NOTIFICATION_PENDING_ID, builder.build());
+        }
+    }
+
+    private void updateSessionState(boolean isPlaying) {
+        if (mediaSession == null) return;
+        MediaMetadataCompat metadata = new MediaMetadataCompat.Builder()
+                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentTitle)
+                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentDesc)
+                .build();
+        mediaSession.setMetadata(metadata);
+
+        PlaybackStateCompat state = new PlaybackStateCompat.Builder()
+                .setActions(PlaybackStateCompat.ACTION_PLAY
+                        | PlaybackStateCompat.ACTION_PAUSE
+                        | PlaybackStateCompat.ACTION_PLAY_PAUSE
+                        | PlaybackStateCompat.ACTION_SKIP_TO_NEXT
+                        | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+                        | PlaybackStateCompat.ACTION_STOP)
+                .setState(isPlaying ? PlaybackStateCompat.STATE_PLAYING
+                                : PlaybackStateCompat.STATE_PAUSED,
+                        PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1f)
+                .build();
+        mediaSession.setPlaybackState(state);
+    }
+
     void updateCover(Bitmap bitmap) {
         views.setImageViewBitmap(R.id.image, bitmap);
-        notificationManager.notify(NOTIFICATION_PENDING_ID, builder.build());
+        refreshNotification(currentPlaying, currentTitle, currentDesc);
     }
 
     void updateCover(int srcId) {
         views.setImageViewResource(R.id.image, srcId);
+        refreshNotification(currentPlaying, currentTitle, currentDesc);
     }
 
     // 更新Notification
@@ -260,7 +371,7 @@ public class MediaPlayerService extends Service {
             }
         }
 
-        // 刷新notification
-        notificationManager.notify(NOTIFICATION_PENDING_ID, builder.build());
+        refreshNotification(isPlaying, title, desc);
+        updateSessionState(isPlaying);
     }
 }

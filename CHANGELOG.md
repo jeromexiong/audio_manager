@@ -1,3 +1,13 @@
+## Next
+- Support Android 12+ `PendingIntent` flags and foreground service type
+- Use `MediaSession` / `MediaStyle` for Android notification and lock-screen controls
+- Add `updateInfo` to update title, description, and cover while playing
+- Fix cover load failure stopping playback
+- Fix shuffle mode so every track is visited before the sequence repeats
+- Guard native events after Flutter engine detach
+- Request Android audio focus and avoid iOS background audio mixing
+- Migrate package and example to Dart 3
+
 ## 0.8.2
 - fix `playOrPause` method error
 - Add support for loading covers from the app's data dir on Android

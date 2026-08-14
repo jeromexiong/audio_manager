@@ -20,6 +20,7 @@ Add the following permissions in the `info.plist` file
 	</dict>
 ```
 - ⚠️ Some methods are invalid in the simulator, please use the real machine
+- ⚠️ Only add `UIBackgroundModes -> audio` when your app really keeps playing audio in the background. If the app does not provide background audio, App Store review may reject it with guideline 2.5.4.
 
 ## Android
 Since `Android9.0 (API 28)`, the application disables HTTP plaintext requests by default. To allow requests, add `android:usesCleartextTraffic="true"` in `AndroidManifest.xml`
@@ -31,7 +32,8 @@ Since `Android9.0 (API 28)`, the application disables HTTP plaintext requests by
 >
 ```
 - ⚠️ Android minimum supported version 23 `(app/build.gradle -> minSdkVersion: 23)`
-- ⚠️ Android minimum supported Gradle version is 5.4.1 `(gradle-wrapper.properties -> gradle-5.4.1-all.zip)`
+- ⚠️ Compile against Android SDK 34 or newer when targeting Android 12+ apps. The plugin now requires explicit `PendingIntent` flags, a media playback foreground service type, and Android 13+ receiver export flags.
+- ⚠️ Android notification and lock-screen controls use `MediaSession` / `MediaStyle`. Custom notification icons and full custom layouts are not exposed by the public API.
 
 ## How to use?
 The `audio_manager` plugin is developed in singleton mode. You only need to get`AudioManager.instance` in the method to quickly start using it.
@@ -62,3 +64,15 @@ AudioManager.instance.onEvents((events, args) {
 	print("$events, $args");
 }
 ```
+
+## Update metadata while playing
+
+```dart
+await AudioManager.instance.updateInfo(
+  title: "new title",
+  desc: "new artist",
+  coverUrl: "https://example.com/new-cover.png",
+);
+```
+
+Playback speed is supported through `AudioManager.instance.setRate(AudioRate.rate150)`.
