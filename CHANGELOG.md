@@ -8,6 +8,12 @@
 - Request Android audio focus and avoid iOS background audio mixing
 - Migrate package and example to Dart 3
 
+### Fixed issues
+- Closes [#98](https://github.com/jeromexiong/audio_manager/issues/98), [#99](https://github.com/jeromexiong/audio_manager/issues/99), [#84](https://github.com/jeromexiong/audio_manager/issues/84)
+- Closes [#75](https://github.com/jeromexiong/audio_manager/issues/75), [#97](https://github.com/jeromexiong/audio_manager/issues/97), [#93](https://github.com/jeromexiong/audio_manager/issues/93), [#85](https://github.com/jeromexiong/audio_manager/issues/85)
+- Closes [#58](https://github.com/jeromexiong/audio_manager/issues/58), [#60](https://github.com/jeromexiong/audio_manager/issues/60), [#62](https://github.com/jeromexiong/audio_manager/issues/62), [#63](https://github.com/jeromexiong/audio_manager/issues/63)
+- Closes [#73](https://github.com/jeromexiong/audio_manager/issues/73), [#86](https://github.com/jeromexiong/audio_manager/issues/86), [#87](https://github.com/jeromexiong/audio_manager/issues/87), [#92](https://github.com/jeromexiong/audio_manager/issues/92)
+
 ## 0.8.2
 - fix `playOrPause` method error
 - Add support for loading covers from the app's data dir on Android
