@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
+import android.os.Build;
 import android.util.Log;
 
 import java.lang.ref.WeakReference;
@@ -105,7 +106,11 @@ public class VolumeChangeObserver {
         mVolumeBroadcastReceiver = new VolumeBroadcastReceiver(this);
         IntentFilter filter = new IntentFilter();
         filter.addAction(VOLUME_CHANGED_ACTION);
-        mContext.registerReceiver(mVolumeBroadcastReceiver, filter);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            mContext.registerReceiver(mVolumeBroadcastReceiver, filter, Context.RECEIVER_EXPORTED);
+        } else {
+            mContext.registerReceiver(mVolumeBroadcastReceiver, filter);
+        }
         mRegistered = true;
     }
 
@@ -144,7 +149,7 @@ public class VolumeChangeObserver {
                             listener.onVolumeChanged(volume);
                         }
 
-                        if (BuildConfig.DEBUG) {
+                        if (Log.isLoggable(TAG, Log.DEBUG)) {
                             Log.d(TAG, "volume=" + volume);
                         }
                     }

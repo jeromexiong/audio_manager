@@ -4,25 +4,26 @@ version '1.0'
 buildscript {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.3'
+        classpath 'com.android.tools.build:gradle:8.13.1'
     }
 }
 
 rootProject.allprojects {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
 }
 
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 28
+    namespace 'cc.dync.audio_manager'
+    compileSdkVersion 34
 
     defaultConfig {
         minSdkVersion 23
@@ -35,8 +36,9 @@ android {
         sourceCompatibility = 1.8
         targetCompatibility = 1.8
     }
-    dependencies {
-        implementation 'com.google.android.exoplayer:exoplayer:2.11.1'
-        implementation 'com.google.android.exoplayer:exoplayer-ui:2.11.1'
-    }
+}
+
+dependencies {
+    implementation 'androidx.annotation:annotation:1.7.1'
+    implementation 'androidx.core:core:1.13.1'
 }

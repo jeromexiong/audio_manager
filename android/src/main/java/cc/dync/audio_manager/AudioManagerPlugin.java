@@ -13,7 +13,6 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
-import io.flutter.plugin.common.PluginRegistry.Registrar;
 
 /**
  * AudioManagerPlugin
@@ -27,7 +26,6 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
     private VolumeChangeObserver volumeChangeObserver;
 
     private static FlutterAssets flutterAssets;
-    private static Registrar registrar;
 
     private static synchronized AudioManagerPlugin getInstance() {
         if (instance == null) {
@@ -49,28 +47,6 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
         channel.setMethodCallHandler(getInstance());
         setup(flutterPluginBinding.getApplicationContext(), channel);
         AudioManagerPlugin.flutterAssets = flutterPluginBinding.getFlutterAssets();
-    }
-
-    // This static function is optional and equivalent to onAttachedToEngine. It
-    // supports the old
-    // pre-Flutter-1.12 Android projects. You are encouraged to continue supporting
-    // plugin registration via this function while apps migrate to use the new
-    // Android APIs
-    // post-flutter-1.12 via https://flutter.dev/go/android-project-migration.
-    //
-    // It is encouraged to share logic between onAttachedToEngine and registerWith
-    // to keep
-    // them functionally equivalent. Only one of onAttachedToEngine or registerWith
-    // will be called
-    // depending on the user's project. onAttachedToEngine or registerWith must both
-    // be defined
-    // in the same class.
-    public static void registerWith(Registrar registrar) {
-        MethodChannel channel = new MethodChannel(registrar.messenger(), "audio_manager");
-
-        channel.setMethodCallHandler(getInstance());
-        instance.setup(registrar.context(), channel);
-        AudioManagerPlugin.registrar = registrar;
     }
 
     private void setup(Context context, MethodChannel channel) {
@@ -163,17 +139,13 @@ public class AudioManagerPlugin implements FlutterPlugin, MethodCallHandler, Vol
                 info.isAsset = isLocal;
                 info.isAuto = isAuto;
                 if (isLocal) {
-                    if (registrar != null) {
-                        info.url = registrar.lookupKeyForAsset(url);
-                    } else if (flutterAssets != null) {
+                    if (flutterAssets != null) {
                         info.url = AudioManagerPlugin.flutterAssets.getAssetFilePathByName(url);
                     }
                 }
                 info.cover = cover;
                 if (isLocalCover) {
-                    if (registrar != null) {
-                        info.cover = registrar.lookupKeyForAsset(cover);
-                    } else if (flutterAssets != null) {
+                    if (flutterAssets != null) {
                         if (helper.isDataDirFile(cover)) {
                             info.cover = cover;
                         } else {

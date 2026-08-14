@@ -16,15 +16,15 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
   bool isPlaying = false;
-  Duration _duration;
-  Duration _position;
-  double _slider;
-  double _sliderVolume;
-  String _error;
+  Duration _duration = Duration.zero;
+  Duration _position = Duration.zero;
+  double _slider = 0.0;
+  double _sliderVolume = 0.0;
+  String _error = "";
   num curIndex = 0;
   PlayMode playMode = AudioManager.instance.playMode;
 
-  final list = [
+  final list = <Map<String, String>>[
     {
       "title": "Assets",
       "desc": "assets playback",
@@ -57,8 +57,8 @@ class _MyAppState extends State<MyApp> {
 
   void setupAudio() {
     List<AudioInfo> _list = [];
-    list.forEach((item) => _list.add(AudioInfo(item["url"],
-        title: item["title"], desc: item["desc"], coverUrl: item["coverUrl"])));
+    list.forEach((item) => _list.add(AudioInfo(item["url"]!,
+        title: item["title"]!, desc: item["desc"]!, coverUrl: item["coverUrl"]!)));
 
     AudioManager.instance.audioList = _list;
     AudioManager.instance.intercepter = true;
@@ -72,13 +72,13 @@ class _MyAppState extends State<MyApp> {
               "start load data callback, curIndex is ${AudioManager.instance.curIndex}");
           _position = AudioManager.instance.position;
           _duration = AudioManager.instance.duration;
-          _slider = 0;
+          _slider = 0.0;
           setState(() {});
           AudioManager.instance.updateLrc("audio resource loading....");
           break;
         case AudioManagerEvents.ready:
           print("ready to play");
-          _error = null;
+          _error = "";
           _sliderVolume = AudioManager.instance.volume;
           _position = AudioManager.instance.position;
           _duration = AudioManager.instance.duration;
@@ -106,7 +106,7 @@ class _MyAppState extends State<MyApp> {
           AudioManager.instance.updateLrc(args["position"].toString());
           break;
         case AudioManagerEvents.error:
-          _error = args;
+          _error = args.toString();
           setState(() {});
           break;
         case AudioManagerEvents.ended:
@@ -174,9 +174,9 @@ class _MyAppState extends State<MyApp> {
                 child: ListView.separated(
                     itemBuilder: (context, index) {
                       return ListTile(
-                        title: Text(list[index]["title"],
+                        title: Text(list[index]["title"]!,
                             style: TextStyle(fontSize: 18)),
-                        subtitle: Text(list[index]["desc"]),
+                        subtitle: Text(list[index]["desc"]!),
                         onTap: () => AudioManager.instance.play(index: index),
                       );
                     },
@@ -185,9 +185,9 @@ class _MyAppState extends State<MyApp> {
                     itemCount: list.length),
               ),
               Center(
-                  child: Text(_error != null
+                  child: Text(_error != ""
                       ? _error
-                      : "${AudioManager.instance.info.title} lrc text: $_position")),
+                      : "${AudioManager.instance.info?.title ?? ''} lrc text: $_position")),
               bottomPanel()
             ],
           ),
@@ -269,7 +269,6 @@ class _MyAppState extends State<MyApp> {
           color: Colors.black,
         );
     }
-    return Container();
   }
 
   Widget songProgress(BuildContext context) {
@@ -299,14 +298,14 @@ class _MyAppState extends State<MyApp> {
                   inactiveTrackColor: Colors.grey,
                 ),
                 child: Slider(
-                  value: _slider ?? 0,
+                  value: _slider,
                   onChanged: (value) {
                     setState(() {
                       _slider = value;
                     });
                   },
                   onChangeEnd: (value) {
-                    if (_duration != null) {
+                    if (_duration != Duration.zero) {
                       Duration msec = Duration(
                           milliseconds:
                               (_duration.inMilliseconds * value).round());
@@ -325,7 +324,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   String _formatDuration(Duration d) {
-    if (d == null) return "--:--";
+    if (d == Duration.zero) return "--:--";
     int minute = d.inMinutes;
     int second = (d.inSeconds > 60) ? (d.inSeconds % 60) : d.inSeconds;
     String format = ((minute < 10) ? "0$minute" : "$minute") +
@@ -349,7 +348,7 @@ class _MyAppState extends State<MyApp> {
           child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 0),
               child: Slider(
-                value: _sliderVolume ?? 0,
+                value: _sliderVolume,
                 onChanged: (value) {
                   setState(() {
                     _sliderVolume = value;
