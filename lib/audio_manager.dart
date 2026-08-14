@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math';
-import 'package:flutter/services.dart';
-import 'package:audio_manager/src/AudioType.dart';
+
 import 'package:audio_manager/src/AudioInfo.dart';
+import 'package:audio_manager/src/AudioType.dart';
+import 'package:flutter/services.dart';
 
 export 'package:audio_manager/src/AudioInfo.dart';
 export 'package:audio_manager/src/AudioType.dart';
@@ -93,6 +93,7 @@ class AudioManager {
     switch (call.method) {
       case "ready":
         _isLoading = false;
+        _error = null;
         _duration = Duration(milliseconds: call.arguments ?? 0);
         _onEvents(AudioManagerEvents.ready, _duration);
         break;
@@ -108,7 +109,6 @@ class AudioManager {
         _setPlaying(call.arguments ?? false);
         break;
       case "timeupdate":
-        _error = null;
         _position = Duration(milliseconds: call.arguments["position"] ?? 0);
         _duration = Duration(milliseconds: call.arguments["duration"] ?? 0);
         if (!_playing) _setPlaying(true);
@@ -485,10 +485,10 @@ class AudioManager {
   /// set volume range(0~1). `showVolume`: show volume view or not and this is only in iOS
   /// ⚠️ IOS simulator is invalid, please use real machine
   Future<String> setVolume(double value, {bool showVolume = false}) async {
-    var volume = min(value, 1);
-    value = max(value, 0);
+    // 原实现只对 value 做了上限、对另一变量做了下限，负值会原样传给原生
+    final clamped = value.clamp(0.0, 1.0);
     final result = await _channel
-        .invokeMethod("setVolume", {"value": volume, "showVolume": showVolume});
+        .invokeMethod("setVolume", {"value": clamped, "showVolume": showVolume});
     return result;
   }
 
