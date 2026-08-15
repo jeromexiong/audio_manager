@@ -1,16 +1,27 @@
 # audio_manager_example
 
-Demonstrates how to use the audio_manager plugin.
+A runnable Flutter example for the `audio_manager` plugin.
 
-## Getting Started
+It demonstrates local assets, local files, network playback, player controls, volume, seeking, and system media controls.
 
-This project is a starting point for a Flutter application.
+## Run
 
-A few resources to get you started if this is your first Flutter project:
+```bash
+flutter pub get
+flutter run
+```
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+You can also run it on a specific platform:
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+flutter run -d macos
+flutter run -d windows
+flutter run -d linux
+flutter run -d chrome
+```
+
+## Notes
+
+- iOS and Android notifications, lock-screen controls, and background audio should be tested on a real device or a supported emulator configuration.
+- Desktop playback integrates with macOS Now Playing / Control Center, Windows SMTC, and Linux MPRIS.
+- The web demo uses `HTMLAudioElement` and does not provide notification or background playback behavior.
