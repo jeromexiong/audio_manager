@@ -7,6 +7,8 @@ A flutter plugin for music playback, including notification handling.
 <img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/android.png" height="300" alt="The example app running in Android"><img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/android2.png" height="300" alt="The example app running in Android"><img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/iOS.png" height="300" alt="The example app running in iOS"><img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/iOS2.jpeg" height="300" alt="The example app running in iOS">
 
 ## iOS
+The plugin supports both CocoaPods and Swift Package Manager (SPM) on iOS. Flutter 3.24+ integrates it via SPM automatically; otherwise it falls back to CocoaPods.
+
 Add the following permissions in the `info.plist` file
 ```xml
 	<key>UIBackgroundModes</key>

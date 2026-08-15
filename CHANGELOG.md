@@ -1,3 +1,8 @@
+## 0.9.3
+- Add Swift Package Manager (SPM) support on iOS, coexisting with CocoaPods; the iOS entry point is now the pure-Swift `SwiftAudioManagerPlugin`
+- Migrate iOS sources into the SPM package layout (`ios/audio_manager/Sources/audio_manager/`) and align the podspec deployment target with iOS 13.0
+- Migrate the example app to SPM (CocoaPods deintegrated)
+
 ## 0.9.2
 - Rebuild the web implementation on `package:web` (`HTMLAudioElement`), fixing the runtime crash, adding event forwarding, and resolving local assets in release builds
 - Request the Android 13+ `POST_NOTIFICATIONS` permission at runtime and re-post the playback card once granted

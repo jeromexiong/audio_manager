@@ -25,7 +25,7 @@ flutter:
         package: cc.dync.audio_manager
         pluginClass: AudioManagerPlugin
       ios:
-        pluginClass: AudioManagerPlugin
+        pluginClass: SwiftAudioManagerPlugin
       web:
         pluginClass: AudioManagerPlugin
         fileName: audio_manager_web.dart
