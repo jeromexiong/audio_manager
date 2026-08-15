@@ -1,25 +1,23 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:audio_manager/src/AudioInfo.dart';
-import 'package:audio_manager/src/AudioType.dart';
+import 'package:audio_manager/src/audio_info.dart';
+import 'package:audio_manager/src/audio_type.dart';
 import 'package:flutter/services.dart';
 
-export 'package:audio_manager/src/AudioInfo.dart';
-export 'package:audio_manager/src/AudioType.dart';
+export 'package:audio_manager/src/audio_info.dart';
+export 'package:audio_manager/src/audio_type.dart';
 
 class AudioManager {
   static AudioManager? _instance;
   static AudioManager get instance => _getInstance();
 
-  static _getInstance() {
-    if (_instance == null) {
-      _instance = new AudioManager._();
-    }
-    return _instance;
+  static AudioManager _getInstance() {
+    _instance ??= AudioManager._();
+    return _instance!;
   }
 
-  static MethodChannel _channel = const MethodChannel('audio_manager');
+  static final MethodChannel _channel = const MethodChannel('audio_manager');
 
   AudioManager._() {
     _channel.setMethodCallHandler(_handler);
@@ -62,7 +60,7 @@ class AudioManager {
 
   /// Set up playlists. Use the [play] or [start] method if you want to play
   set audioList(List<AudioInfo> list) {
-    if (list.length == 0) throw "[list] can not be null or empty";
+    if (list.isEmpty) throw "[list] can not be null or empty";
     _audioList = list;
     if (playMode == PlayMode.shuffle) _resetShuffleQueue();
     _info = _selectTrack();
@@ -99,8 +97,9 @@ class AudioManager {
         break;
       case "seekComplete":
         _position = Duration(milliseconds: call.arguments ?? 0);
-        if (_duration.inMilliseconds != 0)
+        if (_duration.inMilliseconds != 0) {
           _onEvents(AudioManagerEvents.seekComplete, _position);
+        }
         break;
       case "buffering":
         _onEvents(AudioManagerEvents.buffering, call.arguments);
@@ -112,8 +111,9 @@ class AudioManager {
         _position = Duration(milliseconds: call.arguments["position"] ?? 0);
         _duration = Duration(milliseconds: call.arguments["duration"] ?? 0);
         if (!_playing) _setPlaying(true);
-        if (_position.inMilliseconds < 0 || _duration.inMilliseconds <= 0)
+        if (_position.inMilliseconds < 0 || _duration.inMilliseconds <= 0) {
           break;
+        }
         if (_position > _duration) {
           _position = _duration;
           _setPlaying(false);
@@ -157,8 +157,9 @@ class AudioManager {
     var errMsg = "";
     if (_info == null) errMsg = "you must invoke the [start] method first";
     if (_error != null && _error!.isNotEmpty) errMsg = _error!;
-    if (_isLoading && (_error == null || _error!.isEmpty))
+    if (_isLoading && (_error == null || _error!.isEmpty)) {
       errMsg = "audio resource loading....";
+    }
 
     if (errMsg.isNotEmpty) _onEvents(AudioManagerEvents.error, errMsg);
     return errMsg;
@@ -200,9 +201,6 @@ class AudioManager {
       bool showStopButton = true}) async {
     if (url.isEmpty) return "[url] can not be null or empty";
     if (title.isEmpty) return "[title] can not be null or empty";
-    cover = cover;
-    desc = desc;
-
     _info = AudioInfo(url,
         title: title,
         desc: desc,
@@ -235,8 +233,9 @@ class AudioManager {
 
   /// Play specified subscript audio if you want
   Future<String> play({int? index, bool? auto}) async {
-    if (index != null && (index < 0 || index >= _audioList.length))
+    if (index != null && (index < 0 || index >= _audioList.length)) {
       throw "invalid index";
+    }
     _auto = auto ?? true;
     _curIndex = index ?? _curIndex;
     if (playMode == PlayMode.shuffle) {
@@ -263,7 +262,7 @@ class AudioManager {
     _info = random;
     _onEvents(AudioManagerEvents.start, _info);
 
-    final regx = new RegExp(r'^(http|https|file):\/\/\/?([\w.]+\/?)\S*');
+    final regx = RegExp(r'^(http|https|file):\/\/\/?([\w.]+\/?)\S*');
     final result = await _channel.invokeMethod('start', {
       "url": _info!.url,
       "title": _info!.title,
@@ -325,8 +324,9 @@ class AudioManager {
   Future<String> seekTo(Duration position) async {
     if (_preprocessing().isNotEmpty) return _preprocessing();
     if (position.inMilliseconds < 0 ||
-        position.inMilliseconds > duration.inMilliseconds)
+        position.inMilliseconds > duration.inMilliseconds) {
       return "[position] must be greater than 0 and less than the total duration";
+    }
     return await _channel
         .invokeMethod("seekTo", {"position": position.inMilliseconds});
   }
@@ -334,20 +334,19 @@ class AudioManager {
   /// `rate` Play rate, default [AudioRate.rate100] is 1.0
   Future<String> setRate(AudioRate rate) async {
     if (_preprocessing().isNotEmpty) return _preprocessing();
-    const _rates = [0.5, 0.75, 1, 1.5, 1.75, 2];
-    rate = rate;
-    double _rate = _rates[rate.index].toDouble();
-    return await _channel.invokeMethod("rate", {"rate": _rate});
+    const rates = [0.5, 0.75, 1, 1.5, 1.75, 2];
+    double rateValue = rates[rate.index].toDouble();
+    return await _channel.invokeMethod("rate", {"rate": rateValue});
   }
 
   /// stop play
-  stop() {
+  void stop() {
     _reset();
     _initialize = false;
     _channel.invokeMethod("stop");
   }
 
-  _reset() {
+  void _reset() {
     if (_isLoading) return;
     _duration = Duration(milliseconds: 0);
     _position = Duration(milliseconds: 0);
@@ -357,14 +356,14 @@ class AudioManager {
   }
 
   /// release all resource
-  release() {
+  void release() {
     _reset();
     _channel.invokeListMethod("release");
   }
 
   /// Update play details
-  updateLrc(String lrc) {
-    if (_preprocessing().isNotEmpty) return _preprocessing();
+  void updateLrc(String lrc) {
+    if (_preprocessing().isNotEmpty) return;
     _channel.invokeMethod("updateLrc", {"lrc": lrc});
   }
 
@@ -395,7 +394,7 @@ class AudioManager {
     current.showNextButton = newShowNextButton;
     current.showStopButton = newShowStopButton;
 
-    final regx = new RegExp(r'^(http|https|file):\/\/\/?([\w.]+\/?)\S*');
+    final regx = RegExp(r'^(http|https|file):\/\/\/?([\w.]+\/?)\S*');
     final result = await _channel.invokeMethod("updateInfo", {
       "title": newTitle,
       "desc": newDesc,
@@ -432,7 +431,7 @@ class AudioManager {
   }
 
   void _resetShuffleQueue() {
-    if (_audioList.length == 0) return;
+    if (_audioList.isEmpty) return;
     _shuffleQueue = _audioList.asMap().keys.toList()..shuffle();
     _shuffleCursor = _shuffleQueue.indexOf(_curIndex);
     if (_shuffleCursor < 0) _shuffleCursor = 0;

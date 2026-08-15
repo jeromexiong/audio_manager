@@ -248,8 +248,8 @@ class AudioManagerPlugin {
     }
   }
 
-  /// 框架解码出的 arguments 是 Map<Object?, Object?>，需安全地转为 Map<String, dynamic>，
-  /// 否则直接赋给 Map<String, dynamic> 会触发运行时 TypeError。
+  /// 框架解码出的 arguments 是 `Map<Object?, Object?>`，需安全地转为 `Map<String, dynamic>`，
+  /// 否则直接赋给 `Map<String, dynamic>` 会触发运行时 TypeError。
   Map<String, dynamic> _argumentsOf(Object? arguments) {
     if (arguments is Map) {
       return arguments.map((key, value) => MapEntry(key.toString(), value));

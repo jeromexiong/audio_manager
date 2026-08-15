@@ -2,6 +2,7 @@
 - Add Swift Package Manager (SPM) support on iOS, coexisting with CocoaPods; the iOS entry point is now the pure-Swift `SwiftAudioManagerPlugin`
 - Migrate iOS sources into the SPM package layout (`ios/audio_manager/Sources/audio_manager/`) and align the podspec deployment target with iOS 13.0
 - Migrate the example app to SPM (CocoaPods deintegrated)
+- Adopt `package:lints/recommended` and resolve all static-analysis findings (type annotations, file naming, web doc comments, example dependency placement) to pass the pub.dev analysis check
 
 ## 0.9.2
 - Rebuild the web implementation on `package:web` (`HTMLAudioElement`), fixing the runtime crash, adding event forwarding, and resolving local assets in release builds

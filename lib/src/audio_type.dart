@@ -27,7 +27,7 @@ enum AudioManagerEvents {
   volumeChange,
   unknow
 }
-typedef void Events(AudioManagerEvents events, args);
+typedef Events = void Function(AudioManagerEvents events, dynamic args);
 
 /// Play rate enumeration [0.5, 0.75, 1, 1.5, 1.75, 2]
 enum AudioRate { rate50, rate75, rate100, rate150, rate175, rate200 }
@@ -44,7 +44,7 @@ class PlaybackState {
 
   final AudioRate? speed;
 
-  final error;
+  final dynamic error;
 
   const PlaybackState(
     this.state, {
