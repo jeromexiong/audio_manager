@@ -6,7 +6,8 @@ void main() {
   const MethodChannel channel = MethodChannel('audio_manager');
 
   TestWidgetsFlutterBinding.ensureInitialized();
-  final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  final messenger =
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   var startResponse = '';
 
   setUp(() {
@@ -55,7 +56,8 @@ void main() {
     expect(visited, hasLength(5));
   });
 
-  test('updateInfo updates current metadata and forwards native call', () async {
+  test('updateInfo updates current metadata and forwards native call',
+      () async {
     final manager = AudioManager.instance;
     manager.nextMode(playMode: PlayMode.sequence);
     manager.audioList = [

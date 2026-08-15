@@ -489,8 +489,8 @@ class AudioManager {
   Future<String> setVolume(double value, {bool showVolume = false}) async {
     // 原实现只对 value 做了上限、对另一变量做了下限，负值会原样传给原生
     final clamped = value.clamp(0.0, 1.0);
-    final result = await _channel
-        .invokeMethod("setVolume", {"value": clamped, "showVolume": showVolume});
+    final result = await _channel.invokeMethod(
+        "setVolume", {"value": clamped, "showVolume": showVolume});
     return result;
   }
 

@@ -27,6 +27,7 @@ enum AudioManagerEvents {
   volumeChange,
   unknow
 }
+
 typedef Events = void Function(AudioManagerEvents events, dynamic args);
 
 /// Play rate enumeration [0.5, 0.75, 1, 1.5, 1.75, 2]
