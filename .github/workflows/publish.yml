@@ -8,8 +8,9 @@ on:
 jobs:
   verify-tag:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Require tag on master
@@ -20,30 +21,20 @@ jobs:
             exit 1
           fi
 
-  publish:
+  test:
     needs: verify-tag
     runs-on: ubuntu-latest
-    environment: pub
-    permissions:
-      contents: read
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
       - run: flutter pub get
       - run: flutter test
-      - name: Verify pub.dev credentials
-        env:
-          PUB_DEV_PUBLISH_ACCESS_TOKEN: ${{ secrets.PUB_DEV_PUBLISH_ACCESS_TOKEN }}
-          PUB_DEV_PUBLISH_REFRESH_TOKEN: ${{ secrets.PUB_DEV_PUBLISH_REFRESH_TOKEN }}
-        run: |
-          if [[ -z "$PUB_DEV_PUBLISH_ACCESS_TOKEN" || -z "$PUB_DEV_PUBLISH_REFRESH_TOKEN" ]]; then
-            echo "::error::Set PUB_DEV_PUBLISH_ACCESS_TOKEN and PUB_DEV_PUBLISH_REFRESH_TOKEN"
-            exit 1
-          fi
-      - name: Publish to pub.dev
-        env:
-          PUB_DEV_PUBLISH_ACCESS_TOKEN: ${{ secrets.PUB_DEV_PUBLISH_ACCESS_TOKEN }}
-          PUB_DEV_PUBLISH_REFRESH_TOKEN: ${{ secrets.PUB_DEV_PUBLISH_REFRESH_TOKEN }}
-        run: flutter pub publish --force
+
+  publish:
+    needs: [verify-tag, test]
+    permissions:
+      id-token: write
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
