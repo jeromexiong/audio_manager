@@ -1,5 +1,11 @@
 # audio_manager
 [![pub package](https://img.shields.io/pub/v/audio_manager.svg)](https://pub.dev/packages/audio_manager)
+[![platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20macOS%20%7C%20Windows%20%7C%20Linux%20%7C%20Web-blue.svg)](https://pub.dev/packages/audio_manager)
+[![points](https://img.shields.io/pub/points/audio_manager.svg)](https://pub.dev/packages/audio_manager)
+[![CI](https://img.shields.io/github/actions/workflow/status/jeromexiong/audio_manager/ci.yml.svg)](https://github.com/jeromexiong/audio_manager/actions)
+[![GitHub release](https://img.shields.io/github/v/release/jeromexiong/audio_manager.svg)](https://github.com/jeromexiong/audio_manager/releases)
+[![License: MIT](https://img.shields.io/github/license/jeromexiong/audio_manager.svg)](https://github.com/jeromexiong/audio_manager/blob/master/LICENSE)
+[![Swift Package Manager](https://img.shields.io/badge/Swift%20Package%20Manager-compatible-brightgreen.svg)](https://github.com/jeromexiong/audio_manager/tree/master/ios)
 
 A Flutter plugin for music playback, notification handling, lock-screen controls, and desktop system media controls.
 
