@@ -1,10 +1,14 @@
-## 0.9.3
+## 1.0.0
+- Add full desktop platform support: macOS, Windows, and Linux
+- Add macOS support with AVFoundation, Now Playing / Control Center, media keys, and system-volume sync via CoreAudio
+- Add Windows support with `Windows.Media.Playback` and SMTC (taskbar media controls)
+- Add Linux support with GStreamer and MPRIS desktop media controls
 - Add Swift Package Manager (SPM) support on iOS, coexisting with CocoaPods; the iOS entry point is now the pure-Swift `SwiftAudioManagerPlugin`
 - Migrate iOS sources into the SPM package layout (`ios/audio_manager/Sources/audio_manager/`) and align the podspec deployment target with iOS 13.0
 - Migrate the example app to SPM (CocoaPods deintegrated)
 - Adopt `package:lints/recommended` and resolve all static-analysis findings (type annotations, file naming, web doc comments, example dependency placement) to pass the pub.dev analysis check
 - Make the package web/WASM-compatible by removing the top-level `dart:io` import (`file()` now uses a conditional `local_file.File`, with a path-only stub on web)
-- Add macOS support (AVFoundation, same method-channel contract; Now Playing/Control Center + media keys, system-volume sync via CoreAudio; no iOS-only audio-session/lock-screen/volume-view)
+- Update README, screenshots, and example documentation; add repository and issue tracker metadata
 
 ## 0.9.2
 - Rebuild the web implementation on `package:web` (`HTMLAudioElement`), fixing the runtime crash, adding event forwarding, and resolving local assets in release builds

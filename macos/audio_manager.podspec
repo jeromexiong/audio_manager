@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'audio_manager'
-  s.version          = '0.9.2'
+  s.version          = '1.0.0'
   s.summary          = 'A flutter plugin for music playback, including notification handling.'
   s.description      = <<-DESC
 A flutter plugin for music playback, including notification handling.

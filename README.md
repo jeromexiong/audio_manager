@@ -26,7 +26,7 @@ Add the dependency to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  audio_manager: ^0.9.2
+  audio_manager: ^1.0.0
 ```
 
 ## iOS
