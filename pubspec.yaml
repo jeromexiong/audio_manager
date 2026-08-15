@@ -27,6 +27,8 @@ flutter:
         pluginClass: AudioManagerPlugin
       ios:
         pluginClass: SwiftAudioManagerPlugin
+      macos:
+        pluginClass: AudioManagerPlugin
       web:
         pluginClass: AudioManagerPlugin
         fileName: audio_manager_web.dart

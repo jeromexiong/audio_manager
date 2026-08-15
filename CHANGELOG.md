@@ -4,6 +4,7 @@
 - Migrate the example app to SPM (CocoaPods deintegrated)
 - Adopt `package:lints/recommended` and resolve all static-analysis findings (type annotations, file naming, web doc comments, example dependency placement) to pass the pub.dev analysis check
 - Make the package web/WASM-compatible by removing the top-level `dart:io` import (`file()` now uses a conditional `local_file.File`, with a path-only stub on web)
+- Add macOS support (AVFoundation, same method-channel contract; Now Playing/Control Center + media keys, system-volume sync via CoreAudio; no iOS-only audio-session/lock-screen/volume-view)
 
 ## 0.9.2
 - Rebuild the web implementation on `package:web` (`HTMLAudioElement`), fixing the runtime crash, adding event forwarding, and resolving local assets in release builds
