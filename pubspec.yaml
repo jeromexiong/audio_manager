@@ -1,7 +1,9 @@
 name: audio_manager
 description: A flutter plugin for music playback, including notification handling.
-version: 0.9.2
+version: 1.0.0
 homepage: https://github.com/jeromexiong/audio_manager
+repository: https://github.com/jeromexiong/audio_manager
+issue_tracker: https://github.com/jeromexiong/audio_manager/issues
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -17,6 +19,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  lints: ^6.1.0
 
 flutter:
   plugin:
@@ -25,6 +28,12 @@ flutter:
         package: cc.dync.audio_manager
         pluginClass: AudioManagerPlugin
       ios:
+        pluginClass: SwiftAudioManagerPlugin
+      macos:
+        pluginClass: AudioManagerPlugin
+      windows:
+        pluginClass: AudioManagerPlugin
+      linux:
         pluginClass: AudioManagerPlugin
       web:
         pluginClass: AudioManagerPlugin
