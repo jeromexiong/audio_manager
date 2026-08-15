@@ -12,6 +12,8 @@
 #include <cstring>
 #include <string>
 
+#include "mpris.h"
+
 #define AUDIO_MANAGER_PLUGIN(obj)                                        \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), audio_manager_plugin_get_type(),    \
                               AudioManagerPlugin))
@@ -46,6 +48,7 @@ static void send_event(AudioManagerPlugin* self, const gchar* method,
 static void on_state_changed(GstPlayer* player, GstPlayerState state,
                              gpointer user_data) {
   AudioManagerPlugin* self = AUDIO_MANAGER_PLUGIN(user_data);
+  mpris_emit_playback_status();
   if (state == GST_PLAYER_STATE_PLAYING) {
     if (!self->playing) {
       self->playing = TRUE;
@@ -69,6 +72,7 @@ static void on_position_updated(GstPlayer* player, gint64 position,
     return;  // 节流到约 1s 一次
   }
   self->last_position_ms = pos_ms;
+  mpris_emit_position();
   g_autoptr(FlValue) map = fl_value_new_map();
   fl_value_set_string_take(map, "position", fl_value_new_int(pos_ms));
   fl_value_set_string_take(map, "duration",
@@ -80,6 +84,7 @@ static void on_position_updated(GstPlayer* player, gint64 position,
 static void on_duration_changed(GstPlayer* player, gint64 duration,
                                 gpointer user_data) {
   AudioManagerPlugin* self = AUDIO_MANAGER_PLUGIN(user_data);
+  mpris_emit_metadata();
   send_event(self, "ready", fl_value_new_int(duration / 1000000));
 }
 
@@ -102,6 +107,17 @@ static void on_end_of_stream(GstPlayer* player, gpointer user_data) {
   AudioManagerPlugin* self = AUDIO_MANAGER_PLUGIN(user_data);
   self->playing = FALSE;
   send_event(self, "ended", fl_value_new_null());
+}
+
+// MPRIS 媒体键回调
+static void on_mpris_next(gpointer user_data) {
+  AudioManagerPlugin* self = AUDIO_MANAGER_PLUGIN(user_data);
+  send_event(self, "next", fl_value_new_null());
+}
+
+static void on_mpris_previous(gpointer user_data) {
+  AudioManagerPlugin* self = AUDIO_MANAGER_PLUGIN(user_data);
+  send_event(self, "previous", fl_value_new_null());
 }
 
 // MARK: - 方法通道
@@ -175,6 +191,7 @@ static FlMethodResponse* handle_method_call(AudioManagerPlugin* self,
       gst_player_play(self->player);
     }
     self->current_url = g_strdup(url);
+    mpris_set_metadata(self->title, self->desc, url);
     return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
   }
 
@@ -201,6 +218,7 @@ static FlMethodResponse* handle_method_call(AudioManagerPlugin* self,
     gst_player_stop(self->player);
     self->playing = FALSE;
     g_clear_pointer(&self->current_url, g_free);
+    mpris_emit_playback_status();
     send_event(self, "stop", fl_value_new_null());
     return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
   }
@@ -208,11 +226,13 @@ static FlMethodResponse* handle_method_call(AudioManagerPlugin* self,
     gst_player_stop(self->player);
     self->playing = FALSE;
     g_clear_pointer(&self->current_url, g_free);
+    mpris_emit_playback_status();
     return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
   }
   if (strcmp(method, "updateLrc") == 0) {
     g_clear_pointer(&self->desc, g_free);
     self->desc = get_string(args, "lrc");
+    mpris_set_metadata(self->title, self->desc, self->current_url);
     return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
   }
   if (strcmp(method, "updateInfo") == 0) {
@@ -220,6 +240,7 @@ static FlMethodResponse* handle_method_call(AudioManagerPlugin* self,
     g_clear_pointer(&self->desc, g_free);
     self->title = get_string(args, "title");
     self->desc = get_string(args, "desc");
+    mpris_set_metadata(self->title, self->desc, self->current_url);
     return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
   }
   if (strcmp(method, "seekTo") == 0) {
@@ -235,6 +256,7 @@ static FlMethodResponse* handle_method_call(AudioManagerPlugin* self,
     gdouble volume = get_double(args, "value");
     volume = volume < 0 ? 0 : (volume > 1 ? 1 : volume);
     gst_player_set_volume(self->player, volume);
+    mpris_emit_volume();
     send_event(self, "volumeChange", fl_value_new_float(volume));
     return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
   }
@@ -274,6 +296,7 @@ static void method_call_cb(FlMethodChannel* channel, FlMethodCall* method_call,
 
 static void audio_manager_plugin_dispose(GObject* object) {
   AudioManagerPlugin* self = AUDIO_MANAGER_PLUGIN(object);
+  mpris_shutdown();
   if (self->player != nullptr) {
     gst_player_stop(self->player);
     gst_object_unref(self->player);
@@ -306,6 +329,15 @@ static void audio_manager_plugin_init(AudioManagerPlugin* self) {
   self->playing = FALSE;
   self->is_auto = TRUE;
   self->last_position_ms = 0;
+
+  MprisCallbacks callbacks;
+  callbacks.player = self->player;
+  callbacks.on_next = on_mpris_next;
+  callbacks.on_previous = on_mpris_previous;
+  callbacks.user_data = self;
+  GError* mpris_error = nullptr;
+  mpris_init(&callbacks, &mpris_error);
+  g_clear_error(&mpris_error);
 }
 
 void audio_manager_plugin_register_with_registrar(
