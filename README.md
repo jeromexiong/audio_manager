@@ -5,9 +5,9 @@ A Flutter plugin for music playback, notification handling, lock-screen controls
 
 ## Screenshots
 
-<img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/android.png" height="300" alt="The example app running in Android">
-<img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/iOS.png" height="300" alt="The example app running in iOS">
-<img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/macos.png" height="300" alt="The example app running in macOS">
+| Android | iOS | macOS |
+| --- | --- | --- |
+| <img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/android.png" width="220" alt="The example app running in Android"> | <img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/iOS.png" width="220" alt="The example app running in iOS"> | <img src="https://raw.githubusercontent.com/jeromexiong/audio_manager/master/screenshots/macos.png" width="320" alt="The example app running in macOS"> |
 
 ## Supported platforms
 
@@ -69,9 +69,9 @@ Desktop playback integrates with the system media controls: macOS Now Playing / 
   <key>com.apple.security.network.client</key>
   <true/>
   ```
-- **Linux**: requires GStreamer development packages to build:
+- **Linux**: requires GStreamer development packages to build (`gst_player` lives in gst-plugins-bad):
   ```bash
-  sudo apt install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+  sudo apt install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev
   ```
 - **Windows**: built with the Windows 10 SDK (C++/WinRT); requires Visual Studio 2022+.
 
