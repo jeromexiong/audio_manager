@@ -82,26 +82,30 @@ The plugin uses a singleton. Get `AudioManager.instance` and start playback dire
 You can use local `assets`, local files, or network resources.
 
 ```dart
-// Initial playback. Preloaded playback information
-AudioManager.instance
-	.start(
-		"assets/audio.mp3",
-		// "network format resource"
-		// "local resource (file://${file.path})"
-		"title",
-		desc: "desc",
-		// cover: "network cover image resource"
-		cover: "assets/ic_launcher.png")
-	.then((err) {
-	print(err);
-});
+import 'package:audio_manager/audio_manager.dart';
+import 'package:flutter/foundation.dart';
 
-// Play or pause; that is, pause if currently playing, otherwise play
-AudioManager.instance.playOrPause();
+final audio = AudioManager.instance;
 
-// events callback
-AudioManager.instance.onEvents((events, args) {
-	print("$events, $args");
+// Initial playback. Preloaded playback information.
+final error = await audio.start(
+  'assets/audio.mp3',
+  'Example title',
+  desc: 'Example artist',
+  // Network cover or asset cover.
+  cover: 'assets/ic_launcher.png',
+);
+
+if (error.isNotEmpty) {
+  debugPrint('Failed to start: $error');
+}
+
+// Play or pause; that is, pause if currently playing, otherwise play.
+await audio.playOrPause();
+
+// Events callback.
+audio.onEvents((events, args) {
+  debugPrint('$events $args');
 });
 ```
 
@@ -120,6 +124,12 @@ await AudioManager.instance.updateInfo(
 
 Playback speed is supported through `AudioManager.instance.setRate(AudioRate.rate150)`.
 
+```dart
+final audio = AudioManager.instance;
+await audio.setRate(AudioRate.rate150);
+await audio.setVolume(0.8);
+```
+
 ## Query state from background handlers
 
 Firebase background isolates cannot reliably receive `AudioManager.onEvents`. For short-lived checks, query the native state directly:
@@ -129,3 +139,39 @@ final state = await AudioManager.instance.currentState();
 print(state["isPlaying"]);
 print(state["title"]);
 ```
+
+## Release Notes 1.0.0
+
+`audio_manager` 1.0.0 是首个全平台版本，正式支持 iOS、Android、macOS、Windows、Linux 和 Web。
+
+### 新增能力
+
+- iOS 新增 Swift Package Manager（SPM）支持，与 CocoaPods 双轨并行
+- macOS 使用 AVFoundation，接入 Now Playing / Control Center、媒体键和系统音量同步
+- Windows 使用 `Windows.Media.Playback`，接入 SMTC 和任务栏媒体控制
+- Linux 使用 GStreamer，接入 MPRIS 桌面媒体控制
+- Web 基于 `package:web` 和 `HTMLAudioElement`，兼容 Web/WASM
+- 启用 `package:lints/recommended`，静态分析和 pub.dev 评分达到满分
+- 更新 README、截图、示例文档和 pubspec 仓库元数据
+
+### 升级步骤
+
+1. 将依赖更新为 `^1.0.0`
+2. 重新执行 `flutter pub get`
+3. iOS 工程重新执行 `pod install`，或使用 Flutter 3.24+ 自动集成 SPM
+4. macOS 网络音频需要添加 `com.apple.security.network.client` entitlement
+5. Linux 构建需要 GStreamer 开发包
+6. Windows 构建需要 Windows 10 SDK 和 Visual Studio 2022+
+
+### 兼容性
+
+原有核心 API 保持不变，`AudioManager.instance`、`start`、`playOrPause`、`updateInfo`、`currentState` 等仍可直接使用。
+
+### 已知限制
+
+- 通知、锁屏和后台播放能力集中在 iOS / Android
+- 桌面端使用系统媒体控制，不等同于移动端通知栏
+- Web 端不支持后台播放和系统级媒体控制
+- pub.dev 的 `Publisher` 仍显示为 `unverified uploader`，需要在 pub.dev 创建并验证 Publisher 后转移包
+
+完整说明见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。
