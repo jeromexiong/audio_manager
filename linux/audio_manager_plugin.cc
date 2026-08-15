@@ -48,7 +48,7 @@ static void send_event(AudioManagerPlugin* self, const gchar* method,
 static void on_state_changed(GstPlayer* player, GstPlayerState state,
                              gpointer user_data) {
   AudioManagerPlugin* self = AUDIO_MANAGER_PLUGIN(user_data);
-  mpris_emit_playback_status();
+  mpris_update_state(state);
   if (state == GST_PLAYER_STATE_PLAYING) {
     if (!self->playing) {
       self->playing = TRUE;

@@ -20,6 +20,9 @@ gboolean mpris_init(const MprisCallbacks* callbacks, GError** error);
 
 void mpris_shutdown(void);
 
+// 插件在 state-changed 信号里调用,MPRIS 据此上报 PlaybackStatus。
+void mpris_update_state(GstPlayerState state);
+
 // 更新元数据(title/artist/当前 URL),内部会拷贝字符串。
 void mpris_set_metadata(const gchar* title, const gchar* artist,
                         const gchar* url);

@@ -21,6 +21,7 @@ typedef struct {
   gchar* title;
   gchar* artist;
   gchar* url;
+  GstPlayerState playback_state;
 } MprisState;
 
 static MprisState g_state = {0};
@@ -80,11 +81,10 @@ static const gchar introspection_xml[] =
     "</node>";
 
 static const gchar* playback_status(void) {
-  GstPlayerState state = gst_player_get_state(g_state.player);
-  if (state == GST_PLAYER_STATE_PLAYING) {
+  if (g_state.playback_state == GST_PLAYER_STATE_PLAYING) {
     return "Playing";
   }
-  if (state == GST_PLAYER_STATE_PAUSED) {
+  if (g_state.playback_state == GST_PLAYER_STATE_PAUSED) {
     return "Paused";
   }
   return "Stopped";
@@ -94,18 +94,18 @@ static const gchar* playback_status(void) {
 static GVariant* build_metadata(void) {
   GVariantBuilder builder;
   g_variant_builder_init(&builder, G_VARIANT_TYPE("a{sv}"));
-  if (g_state.title != nullptr) {
+  if (g_state.title != NULL) {
     g_variant_builder_add(&builder, "{sv}", "xesam:title",
                           g_variant_new_string(g_state.title));
   }
-  if (g_state.artist != nullptr) {
+  if (g_state.artist != NULL) {
     GVariantBuilder artists;
     g_variant_builder_init(&artists, G_VARIANT_TYPE("as"));
     g_variant_builder_add(&artists, "s", g_state.artist);
     g_variant_builder_add(&builder, "{sv}", "xesam:artist",
                           g_variant_builder_end(&artists));
   }
-  if (g_state.url != nullptr) {
+  if (g_state.url != NULL) {
     g_variant_builder_add(&builder, "{sv}", "xesam:url",
                           g_variant_new_string(g_state.url));
   }
@@ -139,13 +139,13 @@ static GVariant* get_property(const gchar* interface_name,
       return g_variant_new_string("audio_manager");
     }
     if (strcmp(property_name, "SupportedUriSchemes") == 0) {
-      const gchar* schemes[] = {"http", "https", "file", nullptr};
+      const gchar* schemes[] = {"http", "https", "file", NULL};
       return g_variant_new_strv(schemes, -1);
     }
     if (strcmp(property_name, "SupportedMimeTypes") == 0) {
-      return g_variant_new_strv(nullptr, 0);
+      return g_variant_new_strv(NULL, 0);
     }
-    return nullptr;
+    return NULL;
   }
   if (strcmp(interface_name, "org.mpris.MediaPlayer2.Player") == 0) {
     if (strcmp(property_name, "PlaybackStatus") == 0) {
@@ -184,20 +184,20 @@ static GVariant* get_property(const gchar* interface_name,
         strcmp(property_name, "CanControl") == 0) {
       return g_variant_new_boolean(TRUE);
     }
-    return nullptr;
+    return NULL;
   }
-  return nullptr;
+  return NULL;
 }
 
 static void emit_properties_changed(const gchar* interface_name,
                                     GVariant* changed) {
-  if (g_state.connection == nullptr) {
+  if (g_state.connection == NULL) {
     return;
   }
   g_dbus_connection_emit_signal(
-      g_state.connection, nullptr, MPRIS_OBJECT_PATH,
+      g_state.connection, NULL, MPRIS_OBJECT_PATH,
       "org.freedesktop.DBus.Properties", "PropertiesChanged",
-      g_variant_new("(sa{sv}as)", interface_name, changed, nullptr), nullptr);
+      g_variant_new("(sa{sv}as)", interface_name, changed, NULL), NULL);
 }
 
 // MARK: - 方法
@@ -216,11 +216,11 @@ static void on_method_call(GDBusConnection* connection, const gchar* sender,
   // org.freedesktop.DBus.Properties
   if (strcmp(interface_name, "org.freedesktop.DBus.Properties") == 0) {
     if (strcmp(method_name, "Get") == 0) {
-      const gchar* iface = nullptr;
-      const gchar* prop = nullptr;
+      const gchar* iface = NULL;
+      const gchar* prop = NULL;
       g_variant_get(parameters, "(&s&s)", &iface, &prop);
       GVariant* value = get_property(iface, prop);
-      if (value == nullptr) {
+      if (value == NULL) {
         g_dbus_method_invocation_return_dbus_error(
             invocation, "org.freedesktop.DBus.Error.InvalidArgs",
             "Unknown property");
@@ -231,7 +231,7 @@ static void on_method_call(GDBusConnection* connection, const gchar* sender,
       return;
     }
     if (strcmp(method_name, "GetAll") == 0) {
-      const gchar* iface = nullptr;
+      const gchar* iface = NULL;
       g_variant_get(parameters, "(&s)", &iface);
       GVariantBuilder builder;
       g_variant_builder_init(&builder, G_VARIANT_TYPE("a{sv}"));
@@ -242,7 +242,7 @@ static void on_method_call(GDBusConnection* connection, const gchar* sender,
           "CanPause",       "CanSeek",    "CanControl"};
       for (gsize i = 0; i < G_N_ELEMENTS(props); i++) {
         GVariant* value = get_property(iface, props[i]);
-        if (value != nullptr) {
+        if (value != NULL) {
           g_variant_builder_add(&builder, "{sv}", props[i], value);
         }
       }
@@ -260,7 +260,7 @@ static void on_method_call(GDBusConnection* connection, const gchar* sender,
 
   // org.mpris.MediaPlayer2
   if (strcmp(interface_name, "org.mpris.MediaPlayer2") == 0) {
-    g_dbus_method_invocation_return_value(invocation, nullptr);
+    g_dbus_method_invocation_return_value(invocation, NULL);
     return;
   }
 
@@ -273,8 +273,7 @@ static void on_method_call(GDBusConnection* connection, const gchar* sender,
       gst_player_pause(g_state.player);
       mpris_emit_playback_status();
     } else if (strcmp(method_name, "PlayPause") == 0) {
-      GstPlayerState state = gst_player_get_state(g_state.player);
-      if (state == GST_PLAYER_STATE_PLAYING) {
+      if (g_state.playback_state == GST_PLAYER_STATE_PLAYING) {
         gst_player_pause(g_state.player);
       } else {
         gst_player_play(g_state.player);
@@ -284,11 +283,11 @@ static void on_method_call(GDBusConnection* connection, const gchar* sender,
       gst_player_stop(g_state.player);
       mpris_emit_playback_status();
     } else if (strcmp(method_name, "Next") == 0) {
-      if (g_state.on_next != nullptr) {
+      if (g_state.on_next != NULL) {
         g_state.on_next(g_state.user_data);
       }
     } else if (strcmp(method_name, "Previous") == 0) {
-      if (g_state.on_previous != nullptr) {
+      if (g_state.on_previous != NULL) {
         g_state.on_previous(g_state.user_data);
       }
     } else if (strcmp(method_name, "Seek") == 0) {
@@ -299,11 +298,11 @@ static void on_method_call(GDBusConnection* connection, const gchar* sender,
       mpris_emit_position();
     } else if (strcmp(method_name, "SetPosition") == 0) {
       gint64 position = 0;
-      g_variant_get(parameters, "(ox)", nullptr, &position);
+      g_variant_get(parameters, "(ox)", NULL, &position);
       gst_player_seek(g_state.player, position * 1000);
       mpris_emit_position();
     } else if (strcmp(method_name, "OpenUri") == 0) {
-      const gchar* uri = nullptr;
+      const gchar* uri = NULL;
       g_variant_get(parameters, "(&s)", &uri);
       gst_player_stop(g_state.player);
       gst_player_set_uri(g_state.player, uri);
@@ -314,7 +313,7 @@ static void on_method_call(GDBusConnection* connection, const gchar* sender,
           "Unknown method");
       return;
     }
-    g_dbus_method_invocation_return_value(invocation, nullptr);
+    g_dbus_method_invocation_return_value(invocation, NULL);
     return;
   }
 
@@ -367,7 +366,7 @@ static gboolean on_set_property(GDBusConnection* connection,
 }
 
 static const GDBusInterfaceVTable vtable = {
-    on_method_call, on_get_property, on_set_property, nullptr};
+    on_method_call, on_get_property, on_set_property, {NULL, NULL}};
 
 // MARK: - 公共接口
 
@@ -379,28 +378,28 @@ gboolean mpris_init(const MprisCallbacks* callbacks, GError** error) {
 
   GDBusNodeInfo* node =
       g_dbus_node_info_new_for_xml(introspection_xml, error);
-  if (node == nullptr) {
+  if (node == NULL) {
     return FALSE;
   }
 
-  g_state.connection = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, error);
-  if (g_state.connection == nullptr) {
+  g_state.connection = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, error);
+  if (g_state.connection == NULL) {
     g_dbus_node_info_unref(node);
     return FALSE;
   }
 
   // register_object 一次只注册一个接口,循环注册 Properties / MediaPlayer2 / Player
-  for (guint i = 0; node->interfaces[i] != nullptr; i++) {
-    GError* register_error = nullptr;
+  for (guint i = 0; node->interfaces[i] != NULL; i++) {
+    GError* register_error = NULL;
     g_dbus_connection_register_object(g_state.connection, MPRIS_OBJECT_PATH,
-                                      node->interfaces[i], &vtable, nullptr,
-                                      nullptr, &register_error);
+                                      node->interfaces[i], &vtable, NULL,
+                                      NULL, &register_error);
     g_clear_error(&register_error);
   }
 
   g_state.name_owner_id = g_bus_own_name_on_connection(
-      g_state.connection, MPRIS_BUS_NAME, G_BUS_NAME_OWNER_FLAGS_NONE, nullptr,
-      nullptr, nullptr, nullptr);
+      g_state.connection, MPRIS_BUS_NAME, G_BUS_NAME_OWNER_FLAGS_NONE, NULL,
+      NULL, NULL, NULL);
   g_dbus_node_info_unref(node);
   return TRUE;
 }
@@ -421,16 +420,21 @@ void mpris_set_metadata(const gchar* title, const gchar* artist,
   g_clear_pointer(&g_state.title, g_free);
   g_clear_pointer(&g_state.artist, g_free);
   g_clear_pointer(&g_state.url, g_free);
-  if (title != nullptr) {
+  if (title != NULL) {
     g_state.title = g_strdup(title);
   }
-  if (artist != nullptr) {
+  if (artist != NULL) {
     g_state.artist = g_strdup(artist);
   }
-  if (url != nullptr) {
+  if (url != NULL) {
     g_state.url = g_strdup(url);
   }
   mpris_emit_metadata();
+}
+
+void mpris_update_state(GstPlayerState state) {
+  g_state.playback_state = state;
+  mpris_emit_playback_status();
 }
 
 void mpris_emit_playback_status(void) {
