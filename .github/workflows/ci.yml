@@ -28,3 +28,41 @@ jobs:
       - run: flutter test
       - working-directory: example
         run: flutter test
+
+  # 桌面平台构建验证(原生代码无法在 mac 上编译,由 CI 闭环)
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - working-directory: example
+        run: flutter pub get
+      - working-directory: example
+        run: flutter build macos --debug --no-codesign
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - working-directory: example
+        run: flutter pub get
+      - working-directory: example
+        run: flutter build windows --debug
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build libgtk-3-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+      - working-directory: example
+        run: flutter pub get
+      - working-directory: example
+        run: flutter build linux --debug
