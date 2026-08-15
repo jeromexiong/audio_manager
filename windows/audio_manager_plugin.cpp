@@ -2,7 +2,7 @@
 // 基于 Windows.Media.Playback.MediaPlayer,方法通道契约与 iOS/macOS 一致。
 // 阶段 P1:播放核心 + 事件;P2 将接入 SMTC(系统媒体传输控制)。
 
-#include "audio_manager_plugin.h"
+#include "audio_manager/audio_manager_plugin.h"
 
 #include <flutter/method_channel.h>
 #include <flutter/plugin_registrar_windows.h>
@@ -376,8 +376,8 @@ class AudioManagerPlugin : public flutter::Plugin {
     });
 
     player_.MediaFailed([this](const auto&, const auto& args) {
-      auto message = args.ErrorMessage().c_str();
-      SendEvent("error", flutter::EncodableValue(std::string(message)));
+      SendEvent("error",
+                flutter::EncodableValue(winrt::to_string(args.ErrorMessage())));
     });
   }
 
