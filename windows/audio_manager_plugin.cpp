@@ -12,6 +12,8 @@
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Media.Core.h>
 #include <winrt/Windows.Media.Playback.h>
+#include <winrt/Windows.Media.h>
+#include <winrt/Windows.Storage.Streams.h>
 
 #include <algorithm>
 #include <chrono>
@@ -23,6 +25,12 @@ namespace {
 using winrt::Windows::Media::Core::MediaSource;
 using winrt::Windows::Media::Playback::MediaPlayer;
 using winrt::Windows::Media::Playback::MediaPlaybackState;
+using winrt::Windows::Media::MediaPlaybackStatus;
+using winrt::Windows::Media::MediaPlaybackType;
+using winrt::Windows::Media::SystemMediaTransportControls;
+using winrt::Windows::Media::SystemMediaTransportControlsButton;
+using winrt::Windows::Media::SystemMediaTransportControlsTimelineProperties;
+using winrt::Windows::Storage::Streams::RandomAccessStreamReference;
 
 // WinRT apartment 一次性初始化(Flutter 宿主可能已初始化,重复调用会抛异常)。
 void EnsureWinRtApartment() {
@@ -68,6 +76,7 @@ class AudioManagerPlugin : public flutter::Plugin {
       std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel)
       : registrar_(registrar), channel_(std::move(channel)), player_(MediaPlayer()) {
     WirePlayerEvents();
+    SetupSmtc();
   }
 
   virtual ~AudioManagerPlugin() {
@@ -103,6 +112,7 @@ class AudioManagerPlugin : public flutter::Plugin {
       }
       title_ = GetString(*args, "title");
       desc_ = GetString(*args, "desc");
+      cover_url_ = GetString(*args, "cover");
       bool is_local = GetBool(*args, "isLocal");
       bool is_auto = GetBool(*args, "isAuto", true);
       is_auto_ = is_auto;
@@ -110,6 +120,10 @@ class AudioManagerPlugin : public flutter::Plugin {
       if (is_auto_) {
         player_.Play();
       }
+      UpdateSmtcMetadata();
+      UpdateSmtcStatus(is_auto_ ? MediaPlaybackStatus::Playing
+                                : MediaPlaybackStatus::Paused);
+      UpdateSmtcTimeline();
       result->Success();
       return;
     }
@@ -120,16 +134,23 @@ class AudioManagerPlugin : public flutter::Plugin {
       } else {
         player_.Play();
       }
+      UpdateSmtcStatus(playing_ ? MediaPlaybackStatus::Playing
+                                : MediaPlaybackStatus::Paused);
+      UpdateSmtcTimeline();
       result->Success(flutter::EncodableValue(playing_));
       return;
     }
     if (method == "play") {
       player_.Play();
+      UpdateSmtcStatus(MediaPlaybackStatus::Playing);
+      UpdateSmtcTimeline();
       result->Success(flutter::EncodableValue(playing_));
       return;
     }
     if (method == "pause") {
       player_.Pause();
+      UpdateSmtcStatus(MediaPlaybackStatus::Paused);
+      UpdateSmtcTimeline();
       result->Success(flutter::EncodableValue(playing_));
       return;
     }
@@ -146,6 +167,7 @@ class AudioManagerPlugin : public flutter::Plugin {
     }
     if (method == "updateLrc") {
       desc_ = GetString(*args, "lrc");
+      UpdateSmtcMetadata();
       result->Success();
       return;
     }
@@ -153,8 +175,9 @@ class AudioManagerPlugin : public flutter::Plugin {
       if (args) {
         title_ = GetString(*args, "title");
         desc_ = GetString(*args, "desc");
-        // 封面缩略图在 P2(SMTC)接入
+        cover_url_ = GetString(*args, "cover");
       }
+      UpdateSmtcMetadata();
       result->Success();
       return;
     }
@@ -164,6 +187,7 @@ class AudioManagerPlugin : public flutter::Plugin {
         player_.PlaybackSession().Position(
             winrt::Windows::Foundation::TimeSpan(
                 std::chrono::milliseconds(static_cast<long long>(ms))));
+        UpdateSmtcTimeline();
       }
       result->Success();
       return;
@@ -246,6 +270,7 @@ class AudioManagerPlugin : public flutter::Plugin {
     }
     playing_ = false;
     current_url_.clear();
+    UpdateSmtcStatus(MediaPlaybackStatus::Stopped);
     SendEvent("stop", flutter::EncodableValue());
   }
 
@@ -324,10 +349,12 @@ class AudioManagerPlugin : public flutter::Plugin {
       map[flutter::EncodableValue("duration")] =
           flutter::EncodableValue(static_cast<int>(DurationMs()));
       SendEvent("timeupdate", flutter::EncodableValue(map));
+      UpdateSmtcTimeline();
     });
 
     player_.MediaEnded([this](const auto&, const auto&) {
       playing_ = false;
+      UpdateSmtcStatus(MediaPlaybackStatus::Stopped);
       SendEvent("ended", flutter::EncodableValue());
     });
 
@@ -335,6 +362,96 @@ class AudioManagerPlugin : public flutter::Plugin {
       auto message = args.ErrorMessage().c_str();
       SendEvent("error", flutter::EncodableValue(std::string(message)));
     });
+  }
+
+  // MARK: - SMTC(系统媒体传输控制)
+
+  void SetupSmtc() {
+    try {
+      smtc_ = player_.SystemMediaTransportControls();
+      smtc_.IsEnabled(true);
+      smtc_.IsPlayEnabled(true);
+      smtc_.IsPauseEnabled(true);
+      smtc_.IsNextEnabled(true);
+      smtc_.IsPreviousEnabled(true);
+      smtc_.IsSeekEnabled(true);
+      smtc_.IsStopEnabled(true);
+
+      smtc_.ButtonPressed([this](const auto&, const auto& args) {
+        auto button = args.Button();
+        switch (button) {
+          case SystemMediaTransportControlsButton::Play:
+            player_.Play();
+            break;
+          case SystemMediaTransportControlsButton::Pause:
+            player_.Pause();
+            break;
+          case SystemMediaTransportControlsButton::Next:
+            SendEvent("next", flutter::EncodableValue());
+            break;
+          case SystemMediaTransportControlsButton::Previous:
+            SendEvent("previous", flutter::EncodableValue());
+            break;
+          case SystemMediaTransportControlsButton::Stop:
+            Stop();
+            break;
+          default:
+            break;
+        }
+      });
+
+      smtc_.PlaybackPositionChangeRequested(
+          [this](const auto&, const auto& args) {
+            try {
+              player_.PlaybackSession().Position(
+                  args.RequestedPlaybackPosition());
+            } catch (...) {
+            }
+          });
+    } catch (...) {
+    }
+  }
+
+  void UpdateSmtcMetadata() {
+    try {
+      auto updater = smtc_.DisplayUpdater();
+      updater.Type(MediaPlaybackType::Music);
+      auto props = updater.MusicProperties();
+      props.Title(winrt::to_hstring(title_));
+      props.Artist(winrt::to_hstring(desc_));
+      if (!cover_url_.empty()) {
+        try {
+          updater.Thumbnail(RandomAccessStreamReference::CreateFromUri(
+              winrt::Windows::Foundation::Uri(
+                  winrt::to_hstring(cover_url_))));
+        } catch (...) {
+        }
+      }
+      updater.Update();
+    } catch (...) {
+    }
+  }
+
+  void UpdateSmtcStatus(MediaPlaybackStatus status) {
+    try {
+      smtc_.PlaybackStatus(status);
+    } catch (...) {
+    }
+  }
+
+  void UpdateSmtcTimeline() {
+    try {
+      auto timeline = SystemMediaTransportControlsTimelineProperties();
+      long long end = static_cast<long long>(DurationMs());
+      long long pos = static_cast<long long>(PositionMs());
+      timeline.StartTime(std::chrono::milliseconds(0));
+      timeline.EndTime(std::chrono::milliseconds(end));
+      timeline.MinSeekTime(std::chrono::milliseconds(0));
+      timeline.MaxSeekTime(std::chrono::milliseconds(end));
+      timeline.Position(std::chrono::milliseconds(pos));
+      smtc_.UpdateTimelineProperties(timeline);
+    } catch (...) {
+    }
   }
 
   void SendBuffer() {
@@ -398,8 +515,10 @@ class AudioManagerPlugin : public flutter::Plugin {
   flutter::PluginRegistrarWindows* registrar_;
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel_;
   MediaPlayer player_;
+  SystemMediaTransportControls smtc_{nullptr};
   std::string title_;
   std::string desc_;
+  std::string cover_url_;
   std::string current_url_;
   bool is_auto_ = true;
   bool playing_ = false;

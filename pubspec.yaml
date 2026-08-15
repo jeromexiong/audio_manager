@@ -31,6 +31,8 @@ flutter:
         pluginClass: AudioManagerPlugin
       windows:
         pluginClass: AudioManagerPlugin
+      linux:
+        pluginClass: AudioManagerPlugin
       web:
         pluginClass: AudioManagerPlugin
         fileName: audio_manager_web.dart
