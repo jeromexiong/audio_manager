@@ -1,7 +1,10 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:audio_manager/src/audio_info.dart';
+import 'package:audio_manager/src/local_file_io.dart'
+    if (dart.library.js_interop) 'package:audio_manager/src/local_file_stub.dart'
+    if (dart.library.html) 'package:audio_manager/src/local_file_stub.dart'
+    as local_file;
 import 'package:audio_manager/src/audio_type.dart';
 import 'package:flutter/services.dart';
 
@@ -215,9 +218,9 @@ class AudioManager {
 
   /// This will load the file from the file-URI given by:
   /// `'file://${file.path}'`.
-  Future<String> file(File file, String title,
+  Future<String> file(local_file.File file, String title,
       {required String desc, required String cover, required bool auto}) async {
-    return await start("file://${file.path}", title,
+    return await start("file://${local_file.localFilePath(file)}", title,
         desc: desc, cover: cover, auto: auto);
   }
 
