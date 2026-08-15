@@ -52,7 +52,7 @@ class IgnoreResult : public flutter::MethodResult<flutter::EncodableValue> {
   void ErrorInternal(const std::string& /*error_code*/,
                      const std::string& /*error_message*/,
                      const flutter::EncodableValue* /*details*/) override {}
-  void NotImplementedInternal(const std::string& /*method*/) override {}
+  void NotImplementedInternal() override {}
 };
 
 class AudioManagerPlugin : public flutter::Plugin {
@@ -240,8 +240,8 @@ class AudioManagerPlugin : public flutter::Plugin {
     Stop();
     try {
       if (is_local) {
-        // 资产路径(如 assets/xv.mp3)→ 解析为磁盘路径 → file:// URI
-        std::string asset_path = registrar_->GetAssetPathByName(url);
+        // Flutter Windows 未提供插件侧资产 API,手动从 exe 目录解析
+        std::string asset_path = ResolveAssetPath(url);
         if (asset_path.empty()) {
           SendEvent("error", flutter::EncodableValue("找不到资源 " + url));
           return;
@@ -272,6 +272,23 @@ class AudioManagerPlugin : public flutter::Plugin {
     current_url_.clear();
     UpdateSmtcStatus(MediaPlaybackStatus::Stopped);
     SendEvent("stop", flutter::EncodableValue());
+  }
+
+  // Flutter Windows 插件无资产 API;资产位于 <exe_dir>\data\flutter_assets\<asset>
+  static std::string ResolveAssetPath(const std::string& asset) {
+    wchar_t exe[MAX_PATH] = {0};
+    if (GetModuleFileNameW(nullptr, exe, MAX_PATH) == 0) {
+      return "";
+    }
+    std::wstring wpath(exe);
+    auto slash = wpath.find_last_of(L"\\/");
+    if (slash == std::wstring::npos) {
+      return "";
+    }
+    std::wstring full =
+        wpath.substr(0, slash) + L"\\data\\flutter_assets\\" +
+        winrt::to_hstring(asset).c_str();
+    return winrt::to_string(full);
   }
 
   double PositionMs() const {
@@ -374,7 +391,6 @@ class AudioManagerPlugin : public flutter::Plugin {
       smtc_.IsPauseEnabled(true);
       smtc_.IsNextEnabled(true);
       smtc_.IsPreviousEnabled(true);
-      smtc_.IsSeekEnabled(true);
       smtc_.IsStopEnabled(true);
 
       smtc_.ButtonPressed([this](const auto&, const auto& args) {
@@ -444,11 +460,16 @@ class AudioManagerPlugin : public flutter::Plugin {
       auto timeline = SystemMediaTransportControlsTimelineProperties();
       long long end = static_cast<long long>(DurationMs());
       long long pos = static_cast<long long>(PositionMs());
-      timeline.StartTime(std::chrono::milliseconds(0));
-      timeline.EndTime(std::chrono::milliseconds(end));
-      timeline.MinSeekTime(std::chrono::milliseconds(0));
-      timeline.MaxSeekTime(std::chrono::milliseconds(end));
-      timeline.Position(std::chrono::milliseconds(pos));
+      timeline.StartTime(winrt::Windows::Foundation::TimeSpan(
+          std::chrono::milliseconds(0)));
+      timeline.EndTime(winrt::Windows::Foundation::TimeSpan(
+          std::chrono::milliseconds(end)));
+      timeline.MinSeekTime(winrt::Windows::Foundation::TimeSpan(
+          std::chrono::milliseconds(0)));
+      timeline.MaxSeekTime(winrt::Windows::Foundation::TimeSpan(
+          std::chrono::milliseconds(end)));
+      timeline.Position(winrt::Windows::Foundation::TimeSpan(
+          std::chrono::milliseconds(pos)));
       smtc_.UpdateTimelineProperties(timeline);
     } catch (...) {
     }

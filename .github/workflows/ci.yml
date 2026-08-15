@@ -10,7 +10,7 @@ jobs:
   analyze:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -20,7 +20,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -33,19 +33,19 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
       - working-directory: example
         run: flutter pub get
       - working-directory: example
-        run: flutter build macos --debug --no-codesign
+        run: flutter build macos --debug
 
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
